@@ -4,6 +4,7 @@ import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import styled from 'styled-components';
 
+
 // Pages
 import Landing from './pages/Landing';
 import Login from './pages/Auth/Login';

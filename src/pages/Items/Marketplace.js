@@ -24,7 +24,8 @@ const Marketplace = () => {
     const fetchItems = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5000/api/items');
+        console.log("API URL: " + process.env.REACT_APP_API_URL);
+        const response = await axios.get('/items');
         console.log('Fetched items:', response.data);
         setItems(response.data);
         setError('');
@@ -42,7 +43,8 @@ const Marketplace = () => {
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `http://localhost:5000${imageUrl}`;
+    console.log("API PORT: " + process.env.REACT_APP_API_PORT);
+    return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
   };
 
   const filteredItems = items.filter(item => {
