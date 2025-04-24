@@ -61,7 +61,7 @@ const ItemUpload = ({ onSuccess }) => {
         image: image.name
       });
 
-      const response = await axios.post('/api/items', formData, {
+      const response = await axios.post('/items', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

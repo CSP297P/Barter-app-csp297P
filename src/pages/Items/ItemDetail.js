@@ -19,7 +19,7 @@ const ItemDetail = () => {
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/items/${id}`);
+        const response = await axios.get(`/items/${id}`);
         setItem(response.data);
         setError(null);
       } catch (err) {
@@ -35,7 +35,8 @@ const ItemDetail = () => {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return '';
     if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:5000/${imagePath}`;
+    console.log("imagePath: " + imagePath);
+    return `http://localhost:${process.env.REACT_APP_API_PORT}${imagePath}`;
   };
 
   const handleStartChat = () => {
@@ -51,7 +52,7 @@ const ItemDetail = () => {
     
     setSending(true);
     try {
-      await axios.post('http://localhost:5000/api/messages', {
+      await axios.post('/messages', {
         recipientId: item.owner._id,
         itemId: item._id,
         content: message
@@ -92,7 +93,7 @@ const ItemDetail = () => {
     <div className="item-detail">
       <div className="item-detail-container">
         <div className="item-image">
-          <img src={getImageUrl(item.image)} alt={item.title} />
+          <img src={getImageUrl(item.imageUrl)} alt={item.title} />
           <div className={`type-badge ${item.category}`}>{item.category}</div>
         </div>
         

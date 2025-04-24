@@ -66,7 +66,7 @@ const UserProfile = () => {
       formData.append('image', image);
       formData.append('userId', user._id);
 
-      const response = await axios.post('http://localhost:5000/api/items', formData, {
+      const response = await axios.post('/items', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -104,7 +104,7 @@ const UserProfile = () => {
       const itemToDelete = items.find(item => item._id === itemId);
       
       console.log('Current user ID:', user._id);
-      console.log('Item owner ID:', itemToDelete?.owner);
+      console.log('Item owner ID:', itemToDelete.owner._id);
       console.log('Item to delete:', itemToDelete);
       
       // Check if the current user is the owner of the item
@@ -128,23 +128,13 @@ const UserProfile = () => {
       console.log('Available token:', token);
       console.log('Authorization header:', `Bearer ${token}`);
 
-      // Add token to request headers for server-side verification
-      const headers = {
-        'Authorization': `Bearer ${token}`
-      };
 
-      // Let the server handle authorization check
-      const authCheck = await axios.get(`http://localhost:5000/api/items/${itemId}/can-delete`, {
-        headers,
-        withCredentials: true
-      });
-
-      if (!authCheck.data.authorized) {
+      if (!(user._id === itemToDelete.owner._id)) {
         throw new Error('You are not authorized to delete this item');
       }
 
       console.log('Attempting to delete item:', itemId);
-      const response = await axios.delete(`http://localhost:5000/api/items/${itemId}`, {
+      const response = await axios.delete(`/items/${itemId}`, {
         data: { userId: user._id },
         withCredentials: true
       });
@@ -178,7 +168,7 @@ const UserProfile = () => {
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `http://localhost:5000${imageUrl}`;
+    return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
   };
 
   if (!user) {
