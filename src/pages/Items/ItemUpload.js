@@ -56,6 +56,8 @@ const ItemUpload = ({ onSuccess }) => {
       formData.append('condition', condition);
       formData.append('priceRange', priceRange);
       formData.append('image', image);
+      formData.append('ownerId', user._id);
+      formData.append('ownerName', user.displayName);
 
       console.log('Submitting form data:', {
         title,
@@ -64,7 +66,9 @@ const ItemUpload = ({ onSuccess }) => {
         type,
         condition,
         priceRange,
-        image: image.name
+        image: image.name,
+        ownerId: user._id,
+        ownerName: user.displayName
       });
 
       const response = await axios.post('/items', formData, {
