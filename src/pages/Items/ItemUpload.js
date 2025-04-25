@@ -7,7 +7,9 @@ const ItemUpload = ({ onSuccess }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [type, setType] = useState('barter');
   const [condition, setCondition] = useState('');
+  const [priceRange, setPriceRange] = useState('');
   const [image, setImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [error, setError] = useState('');
@@ -39,7 +41,7 @@ const ItemUpload = ({ onSuccess }) => {
       return;
     }
 
-    if (!title || !description || !category || !condition) {
+    if (!title || !description || !category || !condition || !priceRange || !type) {
       setError('All fields are required');
       setLoading(false);
       return;
@@ -50,14 +52,18 @@ const ItemUpload = ({ onSuccess }) => {
       formData.append('title', title);
       formData.append('description', description);
       formData.append('category', category);
+      formData.append('type', type);
       formData.append('condition', condition);
+      formData.append('priceRange', priceRange);
       formData.append('image', image);
 
       console.log('Submitting form data:', {
         title,
         description,
         category,
+        type,
         condition,
+        priceRange,
         image: image.name
       });
 
@@ -74,7 +80,9 @@ const ItemUpload = ({ onSuccess }) => {
       setTitle('');
       setDescription('');
       setCategory('');
+      setType('barter');
       setCondition('');
+      setPriceRange('');
       setImage(null);
       setPreviewUrl('');
       
@@ -117,6 +125,17 @@ const ItemUpload = ({ onSuccess }) => {
           />
         </div>
         <div className="form-group">
+          <label>Type</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            required
+          >
+            <option value="barter">Barter</option>
+            <option value="giveaway">Giveaway</option>
+          </select>
+        </div>
+        <div className="form-group">
           <label>Category</label>
           <select
             value={category}
@@ -124,8 +143,32 @@ const ItemUpload = ({ onSuccess }) => {
             required
           >
             <option value="">Select Category</option>
-            <option value="barter">Barter</option>
-            <option value="giveaway">Giveaway</option>
+            <option value="gaming-console">Gaming Console</option>
+            <option value="sports-equipment">Sports Equipment</option>
+            <option value="electronics">Electronics</option>
+            <option value="books">Books</option>
+            <option value="clothing">Clothing</option>
+            <option value="furniture">Furniture</option>
+            <option value="musical-instruments">Musical Instruments</option>
+            <option value="tools">Tools</option>
+            <option value="art-supplies">Art Supplies</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Estimated Value Range</label>
+          <select
+            value={priceRange}
+            onChange={(e) => setPriceRange(e.target.value)}
+            required
+          >
+            <option value="">Select Value Range</option>
+            <option value="0-50">$0 - $50</option>
+            <option value="51-100">$51 - $100</option>
+            <option value="101-250">$101 - $250</option>
+            <option value="251-500">$251 - $500</option>
+            <option value="501-1000">$501 - $1000</option>
+            <option value="1000+">$1000+</option>
           </select>
         </div>
         <div className="form-group">

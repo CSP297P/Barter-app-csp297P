@@ -8,37 +8,45 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
 }
 
 .marketplace-header h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: #333;
+  margin: 0;
 }
 
 .upload-button {
   background-color: #4CAF50;
   color: white;
-  padding: 0.6rem 1.2rem;
+  padding: 0.4rem 0.8rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
-  height: 38px;
+  width: auto;
+  height: 32px;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .upload-button:hover {
   background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .upload-button:active {
-  transform: translateY(1px);
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .upload-dialog {
@@ -171,24 +179,81 @@
   background-color: #f44336;
 }
 
-.type-badge {
+.tags-container {
   position: absolute;
   top: 10px;
   left: 10px;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: white;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
 }
 
-.type-badge.giveaway {
-  background-color: #2196F3;
+.badge-wrapper {
+  background-color: rgba(108, 117, 125, 0.85);
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 120px;
+}
+
+.badge-label {
+  color: white;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.badge-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  width: fit-content;
+}
+
+.badge-value.has-value {
+  color: #2ecc71;
+}
+
+.badge-value.not-available {
+  color: #95a5a6;
+  opacity: 0.9;
+}
+
+.type-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+  width: fit-content;
 }
 
 .type-badge.barter {
-  background-color: #FFC107;
-  color: #000;
+  color: #2ecc71;
+}
+
+.type-badge.giveaway {
+  color: #3498db;
+}
+
+.type-badge.not-available {
+  color: #95a5a6;
+  opacity: 0.9;
+}
+
+.category-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+  width: fit-content;
+}
+
+.category-badge.not-available {
+  color: #95a5a6;
+  opacity: 0.9;
 }
 
 .item-info {
@@ -204,6 +269,19 @@
   margin: 0.3rem 0;
   font-size: 0.9rem;
   color: #666;
+}
+
+.description {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #4a4a4a;
+  line-height: 1.4;
+  /* Limit to 3 lines with ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .condition {
@@ -302,4 +380,88 @@
   max-width: 450px;
   max-height: 85vh;
   overflow-y: auto;
+}
+
+.marketplace-content {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.filter-pane {
+  width: 250px;
+  flex-shrink: 0;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  align-self: flex-start;
+  position: sticky;
+  top: 2rem;
+}
+
+.filter-section {
+  margin-bottom: 2rem;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-section h3 {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.checkbox-label:hover {
+  color: #333;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.marketplace-main {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .marketplace-content {
+    flex-direction: column;
+  }
+
+  .filter-pane {
+    width: 100%;
+    position: static;
+    margin-bottom: 1rem;
+  }
+
+  .checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
 } 
