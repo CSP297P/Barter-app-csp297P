@@ -10,12 +10,27 @@ const Marketplace = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const { user } = useContext(AuthContext);
 
-  const filterOptions = [
-    { value: 'all', label: 'All Items' },
+  // Filter states
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+
+  const categoryOptions = [
+    { value: 'gaming-console', label: 'Gaming Console' },
+    { value: 'sports-equipment', label: 'Sports Equipment' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'books', label: 'Books' },
+    { value: 'clothing', label: 'Clothing' },
+    { value: 'furniture', label: 'Furniture' },
+    { value: 'musical-instruments', label: 'Musical Instruments' },
+    { value: 'tools', label: 'Tools' },
+    { value: 'art-supplies', label: 'Art Supplies' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const typeOptions = [
     { value: 'barter', label: 'Barter' },
     { value: 'giveaway', label: 'Giveaway' }
   ];
@@ -47,11 +62,30 @@ const Marketplace = () => {
     return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
   };
 
+  const handleCategoryChange = (category) => {
+    setSelectedCategories(prev => {
+      if (prev.includes(category)) {
+        return prev.filter(c => c !== category);
+      }
+      return [...prev, category];
+    });
+  };
+
+  const handleTypeChange = (type) => {
+    setSelectedTypes(prev => {
+      if (prev.includes(type)) {
+        return prev.filter(t => t !== type);
+      }
+      return [...prev, type];
+    });
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || item.category === filter;
-    return matchesSearch && matchesFilter;
+    const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
+    const matchesType = selectedTypes.length === 0 || selectedTypes.includes(item.type);
+    return matchesSearch && matchesCategory && matchesType;
   });
 
   const handleUploadSuccess = (newItem) => {
@@ -88,57 +122,96 @@ const Marketplace = () => {
         )}
       </div>
 
-      <div className="marketplace-filters">
-        <input
-          type="text"
-          placeholder="Search items..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="category-filter"
-        >
-          {filterOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <div className="marketplace-content">
+        <div className="filter-pane">
+          <div className="filter-section">
+            <h3>Categories</h3>
+            <div className="checkbox-group">
+              {categoryOptions.map(category => (
+                <label key={category.value} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedCategories.includes(category.value)}
+                    onChange={() => handleCategoryChange(category.value)}
+                  />
+                  {category.label}
+                </label>
+              ))}
+            </div>
+          </div>
 
-      {error && <div className="error-message">{error}</div>}
-
-      {filteredItems.length === 0 ? (
-        <div className="no-items">
-          <p>No items found matching your criteria.</p>
+          <div className="filter-section">
+            <h3>Type</h3>
+            <div className="checkbox-group">
+              {typeOptions.map(type => (
+                <label key={type.value} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedTypes.includes(type.value)}
+                    onChange={() => handleTypeChange(type.value)}
+                  />
+                  {type.label}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="items-grid">
-          {filteredItems.map((item) => (
-            <Link to={`/item/${item._id}`} key={item._id} className="item-card">
-              <div className="item-image-container">
-                <img src={getImageUrl(item.imageUrl)} alt={item.title} />
-                {item.status !== 'available' && (
-                  <div className={`status-badge ${item.status}`}>
-                    {item.status}
+
+        <div className="marketplace-main">
+          <div className="marketplace-filters">
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+
+          {error && <div className="error-message">{error}</div>}
+
+          {filteredItems.length === 0 ? (
+            <div className="no-items">
+              <p>No items found matching your criteria.</p>
+            </div>
+          ) : (
+            <div className="items-grid">
+              {filteredItems.map((item) => (
+                <Link to={`/item/${item._id}`} key={item._id} className="item-card">
+                  <div className="item-image-container">
+                    <img src={getImageUrl(item.imageUrl)} alt={item.title} />
+                    {item.status !== 'available' && (
+                      <div className={`status-badge ${item.status}`}>
+                        {item.status}
+                      </div>
+                    )}
+                    <div className="tags-container">
+                      <div className="badge-wrapper">
+                        <div className="badge-label">TYPE</div>
+                        <div className={`badge-value ${!item.type ? 'not-available' : 'has-value'}`}>
+                          {item.type || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="badge-wrapper">
+                        <div className="badge-label">CATEGORY</div>
+                        <div className={`badge-value ${!item.category ? 'not-available' : 'has-value'}`}>
+                          {item.category || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className={`type-badge ${item.category}`}>
-                  {item.category}
-                </div>
-              </div>
-              <div className="item-info">
-                <h3>{item.title}</h3>
-                <p className="condition">{item.condition}</p>
-                <p className="owner">Posted by: {item.owner?.displayName || 'Anonymous'}</p>
-              </div>
-            </Link>
-          ))}
+                  <div className="item-info">
+                    <h3>{item.title}</h3>
+                    <p className="description">{item.description}</p>
+                    <p className="condition">{item.condition}</p>
+                    <p className="owner">Posted by: {item.owner?.displayName || 'Anonymous'}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {showUploadDialog && (
         <div className="dialog-overlay" onClick={handleDialogClick}>

@@ -191,24 +191,47 @@
   object-fit: cover;
 }
 
-.type-badge {
+.tags-container {
   position: absolute;
   top: 10px;
   left: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.badge-wrapper {
+  background-color: rgba(108, 117, 125, 0.85);
+  border-radius: 6px;
   padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
+  min-width: 120px;
+}
+
+.badge-label {
   color: white;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  font-weight: 500;
 }
 
-.type-badge.barter {
-  background-color: #f39c12;
+.badge-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  width: fit-content;
 }
 
-.type-badge.giveaway {
-  background-color: #3498db;
+.badge-value.has-value {
+  color: #2ecc71;
+}
+
+.badge-value.not-available {
+  color: #95a5a6;
+  opacity: 0.9;
 }
 
 .item-info {
@@ -217,20 +240,34 @@
 
 .item-info h3 {
   margin: 0 0 0.5rem 0;
-  font-size: 1.1rem;
-  color: #333;
+  font-size: 1.2rem;
 }
 
-.item-info .condition {
-  color: #28a745;
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
+.item-info p {
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
+  color: #666;
 }
 
-.item-info .status {
-  color: #6c757d;
-  font-size: 0.875rem;
-  font-style: italic;
+.description {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #4a4a4a;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.condition {
+  font-weight: 600;
+  color: #4CAF50 !important;
+}
+
+.status {
+  font-weight: 500;
 }
 
 .no-items {
@@ -269,14 +306,15 @@
 }
 
 .delete-button {
+  margin-top: 1rem;
   background-color: #dc3545;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  margin-top: 10px;
+  font-size: 0.9rem;
+  width: 100%;
   transition: background-color 0.2s;
 }
 
@@ -285,8 +323,141 @@
 }
 
 .delete-button:disabled {
-  background-color: #6c757d;
+  background-color: #dc354580;
   cursor: not-allowed;
+}
+
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-content h2 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.dialog-content p {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+.dialog-actions button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.dialog-actions .delete-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  width: auto;
+  margin-top: 0;
+}
+
+.dialog-actions .delete-button:hover {
+  background-color: #c82333;
+}
+
+.dialog-actions .delete-button:disabled {
+  background-color: #dc354580;
+  cursor: not-allowed;
+}
+
+.dialog-actions .cancel-button {
+  background-color: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.dialog-actions .cancel-button:hover {
+  background-color: #e9ecef;
+}
+
+.price-range {
+  font-size: 0.9rem;
+  color: #2ecc71;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.status-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.status-wrapper label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.status-select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.status-select:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.status-select.available {
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.status-select.pending {
+  color: #f39c12;
+  border-color: #f39c12;
+}
+
+.status-select.traded {
+  color: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.status-updating {
+  color: #666;
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 @media (max-width: 768px) {

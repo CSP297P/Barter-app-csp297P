@@ -11,6 +11,12 @@ const itemSchema = new mongoose.Schema({
     required: [true, 'Description is required'],
     trim: true
   },
+  type: {
+    type: String,
+    required: [true, 'Type is required'],
+    default: 'barter',
+    trim: true
+  },
   category: {
     type: String,
     required: [true, 'Category is required'],
@@ -23,6 +29,11 @@ const itemSchema = new mongoose.Schema({
       values: ['New', 'Like New', 'Good', 'Fair', 'Poor'],
       message: 'Condition must be one of: New, Like New, Good, Fair, Poor'
     }
+  },
+  priceRange: {
+    type: String,
+    required: [true, 'Price range is required'],
+    trim: true
   },
   imageUrl: {
     type: String,

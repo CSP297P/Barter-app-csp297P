@@ -11,14 +11,21 @@ const UserProfile = () => {
   const [error, setError] = useState('');
   const [uploadMode, setUploadMode] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(null);
   
   // Item upload states
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('barter');
+  const [category, setCategory] = useState('');
+  const [type, setType] = useState('barter');
   const [condition, setCondition] = useState('');
+  const [priceRange, setPriceRange] = useState('');
   const [image, setImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
+
+  const statusOptions = ['available', 'pending', 'traded'];
 
   useEffect(() => {
     const fetchUserItems = async () => {
@@ -62,9 +69,21 @@ const UserProfile = () => {
       formData.append('title', title);
       formData.append('description', description);
       formData.append('category', category);
+      formData.append('type', type);
       formData.append('condition', condition);
+      formData.append('priceRange', priceRange);
       formData.append('image', image);
       formData.append('userId', user._id);
+
+      // Log the form data to verify all fields
+      console.log('Form data being sent:', {
+        title,
+        description,
+        category,
+        type,
+        condition,
+        priceRange
+      });
 
       const response = await axios.post('/items', formData, {
         headers: {
@@ -80,8 +99,10 @@ const UserProfile = () => {
       // Reset form
       setTitle('');
       setDescription('');
-      setCategory('barter');
+      setCategory('');
+      setType('barter');
       setCondition('');
+      setPriceRange('');
       setImage(null);
       setPreviewUrl('');
     } catch (error) {
@@ -92,49 +113,26 @@ const UserProfile = () => {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
-    // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteClick = (item) => {
+    setItemToDelete(item);
+    setShowDeleteDialog(true);
+  };
 
-    setDeletingItemId(itemId);
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    
+    setDeletingItemId(itemToDelete._id);
     try {
-      // Find the item in the current items list
-      const itemToDelete = items.find(item => item._id === itemId);
-      
       console.log('Current user ID:', user._id);
       console.log('Item owner ID:', itemToDelete.owner._id);
       console.log('Item to delete:', itemToDelete);
       
-      // Check if the current user is the owner of the item
-      if (!itemToDelete) {
-        throw new Error('Item not found');
-      }
-      
-      // Verify authorization token before deletion
-      console.log('All localStorage items:');
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        console.log(`${key}: ${localStorage.getItem(key)}`);
-      }
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      // Log token information for debugging
-      console.log('Required token format: Bearer <jwt_token>');
-      console.log('Available token:', token);
-      console.log('Authorization header:', `Bearer ${token}`);
-
-
       if (!(user._id === itemToDelete.owner._id)) {
         throw new Error('You are not authorized to delete this item');
       }
 
-      console.log('Attempting to delete item:', itemId);
-      const response = await axios.delete(`/items/${itemId}`, {
+      console.log('Attempting to delete item:', itemToDelete._id);
+      const response = await axios.delete(`/items/${itemToDelete._id}`, {
         data: { userId: user._id },
         withCredentials: true
       });
@@ -142,8 +140,7 @@ const UserProfile = () => {
       console.log('Delete response:', response.data);
       
       if (response.data && response.data.message === 'Item deleted successfully') {
-        // Remove the item from the local state
-        setItems(prevItems => prevItems.filter(item => item._id !== itemId));
+        setItems(prevItems => prevItems.filter(item => item._id !== itemToDelete._id));
         setError('');
       } else {
         throw new Error('Unexpected response from server');
@@ -162,13 +159,54 @@ const UserProfile = () => {
       }
     } finally {
       setDeletingItemId(null);
+      setShowDeleteDialog(false);
+      setItemToDelete(null);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteDialog(false);
+    setItemToDelete(null);
   };
 
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
     return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
+  };
+
+  const handleStatusChange = async (itemId, newStatus) => {
+    setUpdatingStatus(itemId);
+    try {
+      const response = await axios.put(`/items/${itemId}`, 
+        { status: newStatus },
+        { withCredentials: true }
+      );
+      
+      if (response.data) {
+        setItems(prevItems => 
+          prevItems.map(item => 
+            item._id === itemId ? response.data : item
+          )
+        );
+        setError('');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update item status';
+      setError(errorMessage);
+      
+      setItems(prevItems => [...prevItems]);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  const formatPriceRange = (range) => {
+    if (!range) return 'N/A';
+    if (range === '1000+') return '$1000+';
+    const [min, max] = range.split('-');
+    return `$${min} - $${max}`;
   };
 
   if (!user) {
@@ -226,12 +264,48 @@ const UserProfile = () => {
               <div className="form-group">
                 <label>Type</label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
                   required
                 >
                   <option value="barter">Barter</option>
                   <option value="giveaway">Giveaway</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Category</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="gaming-console">Gaming Console</option>
+                  <option value="sports-equipment">Sports Equipment</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="books">Books</option>
+                  <option value="clothing">Clothing</option>
+                  <option value="furniture">Furniture</option>
+                  <option value="musical-instruments">Musical Instruments</option>
+                  <option value="tools">Tools</option>
+                  <option value="art-supplies">Art Supplies</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Estimated Value Range</label>
+                <select
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(e.target.value)}
+                  required
+                >
+                  <option value="">Select Value Range</option>
+                  <option value="0-50">$0 - $50</option>
+                  <option value="51-100">$51 - $100</option>
+                  <option value="101-250">$101 - $250</option>
+                  <option value="251-500">$251 - $500</option>
+                  <option value="501-1000">$501 - $1000</option>
+                  <option value="1000+">$1000+</option>
                 </select>
               </div>
               <div className="form-group">
@@ -299,17 +373,46 @@ const UserProfile = () => {
               <div key={item._id} className="item-card">
                 <div className="item-image-container">
                   <img src={getImageUrl(item.imageUrl)} alt={item.title} />
-                  <div className={`type-badge ${item.category}`}>
-                    {item.category}
+                  <div className="tags-container">
+                    <div className="badge-wrapper">
+                      <div className="badge-label">TYPE</div>
+                      <div className={`badge-value ${!item.type ? 'not-available' : 'has-value'}`}>
+                        {item.type || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="badge-wrapper">
+                      <div className="badge-label">CATEGORY</div>
+                      <div className={`badge-value ${!item.category ? 'not-available' : 'has-value'}`}>
+                        {item.category || 'N/A'}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="item-info">
                   <h3>{item.title}</h3>
+                  <p className="description">{item.description}</p>
                   <p className="condition">{item.condition}</p>
-                  <p className="status">Status: {item.status}</p>
+                  <p className="price-range">Est. Value: {formatPriceRange(item.priceRange)}</p>
+                  <div className="status-wrapper">
+                    <label htmlFor={`status-${item._id}`}>Status:</label>
+                    <select
+                      id={`status-${item._id}`}
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(item._id, e.target.value)}
+                      disabled={updatingStatus === item._id}
+                      className={`status-select ${item.status}`}
+                    >
+                      {statusOptions.map(status => (
+                        <option key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    {updatingStatus === item._id && <span className="status-updating">Updating...</span>}
+                  </div>
                   <button
                     className="delete-button"
-                    onClick={() => handleDeleteItem(item._id)}
+                    onClick={() => handleDeleteClick(item)}
                     disabled={deletingItemId === item._id}
                   >
                     {deletingItemId === item._id ? 'Deleting...' : 'Delete Item'}
@@ -320,6 +423,30 @@ const UserProfile = () => {
           </div>
         )}
       </div>
+
+      {showDeleteDialog && (
+        <div className="dialog-overlay" onClick={handleDeleteCancel}>
+          <div className="dialog-content" onClick={e => e.stopPropagation()}>
+            <h2>Delete Item</h2>
+            <p>Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.</p>
+            <div className="dialog-actions">
+              <button 
+                className="cancel-button"
+                onClick={handleDeleteCancel}
+              >
+                Cancel
+              </button>
+              <button 
+                className="delete-button"
+                onClick={handleDeleteConfirm}
+                disabled={deletingItemId === itemToDelete?._id}
+              >
+                {deletingItemId === itemToDelete?._id ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

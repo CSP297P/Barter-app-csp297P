@@ -32,8 +32,8 @@ router.get('/:id', async (req, res) => {
 // Create new item
 router.post('/', auth, upload.single('image'), async (req, res) => {
   try {
-    console.log('Request body:', req.body);
-    console.log('Uploaded file:', req.file);
+    console.log('Full request body:', req.body);
+    console.log('File:', req.file);
     console.log('User:', req.user);
 
     if (!req.file) {
@@ -41,28 +41,33 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const { title, description, category, condition } = req.body;
-    
-    if (!title || !description || !category || !condition) {
-      console.error('Missing required fields:', { title, description, category, condition });
+    const { title, description, category, type, condition, priceRange } = req.body;
+    console.log("Extracted fields:", { title, description, category, type, condition, priceRange });
+
+    if (!title || !description || !category || !condition || !type || !priceRange) {
+      console.error('Missing required fields:', { title, description, category, condition, type, priceRange });
       return res.status(400).json({ message: 'All fields are required' });
     }
 
     const imageUrl = `/uploads/${req.file.filename}`;
     
-    const item = new Item({
+    const itemData = {
       title,
       description,
       category,
       condition,
+      type,
+      priceRange,
       imageUrl,
       owner: req.user.userId
-    });
-
-    console.log('Creating item:', item);
+    };
+    
+    console.log("Creating item with data:", itemData);
+    const item = new Item(itemData);
+    console.log("Created item instance:", item);
 
     const savedItem = await item.save();
-    console.log('Item created successfully:', savedItem);
+    console.log('Item saved successfully:', savedItem);
     
     res.status(201).json(savedItem);
   } catch (error) {
@@ -93,18 +98,30 @@ router.put('/:id', auth, async (req, res) => {
 
     // Check if user is the owner
     if (item.owner.toString() !== req.user.userId) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ message: 'Not authorized to update this item' });
+    }
+
+    const { status } = req.body;
+    
+    // Validate status value
+    if (status && !['available', 'pending', 'traded'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
     }
 
     const updatedItem = await Item.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true }
-    );
+      { status },
+      { new: true, runValidators: true }
+    ).populate('owner', 'displayName');
 
+    console.log('Item status updated:', updatedItem);
     res.json(updatedItem);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating item' });
+    console.error('Error updating item status:', error);
+    res.status(500).json({ 
+      message: 'Error updating item status',
+      error: error.message 
+    });
   }
 });
 
