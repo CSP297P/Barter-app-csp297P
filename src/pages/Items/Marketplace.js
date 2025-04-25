@@ -42,7 +42,15 @@ const Marketplace = () => {
         console.log("API URL: " + process.env.REACT_APP_API_URL);
         const response = await axios.get('/items');
         console.log('Fetched items:', response.data);
-        setItems(response.data);
+        // Map through items to ensure owner information is properly structured
+        const processedItems = response.data.map(item => ({
+          ...item,
+          owner: {
+            displayName: item.ownerName || item.owner?.displayName || 'Anonymous'
+          }
+        }));
+        console.log('Processed items:', processedItems);
+        setItems(processedItems);
         setError('');
       } catch (error) {
         console.error('Error fetching items:', error);
@@ -89,7 +97,14 @@ const Marketplace = () => {
   });
 
   const handleUploadSuccess = (newItem) => {
-    setItems(prevItems => [...prevItems, newItem]);
+    // Ensure the new item has the correct owner structure
+    const processedNewItem = {
+      ...newItem,
+      owner: {
+        displayName: newItem.ownerName || newItem.owner?.displayName || 'Anonymous'
+      }
+    };
+    setItems(prevItems => [...prevItems, processedNewItem]);
     setShowUploadDialog(false);
   };
 
