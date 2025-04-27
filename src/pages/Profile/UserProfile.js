@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
-import { getUserItems, updateUserProfile } from '../../services/mongodb';
+import { getUserItems } from '../../services/mongodb';
 import axios from 'axios';
 import './UserProfile.css';
 
