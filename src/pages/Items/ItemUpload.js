@@ -1,6 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import axios from 'axios';
+import ImageUploader from '../../components/ImageUploader';
 import './ItemUpload.css';
 
 const ItemUpload = ({ onSuccess }) => {
@@ -10,18 +11,18 @@ const ItemUpload = ({ onSuccess }) => {
   const [type, setType] = useState('barter');
   const [condition, setCondition] = useState('');
   const [priceRange, setPriceRange] = useState('');
-  const [image, setImage] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useContext(AuthContext);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreviewUrl(URL.createObjectURL(file));
+  const handleImageUploadComplete = async (uploadedImages) => {
+    if (!uploadedImages || uploadedImages.length === 0) {
+      setError('Please upload at least one image');
+      return;
     }
+
+    const imageUrls = uploadedImages.map(img => img.url);
+    return imageUrls;
   };
 
   const handleSubmit = async (e) => {
@@ -35,12 +36,6 @@ const ItemUpload = ({ onSuccess }) => {
       return;
     }
 
-    if (!image) {
-      setError('Please select an image');
-      setLoading(false);
-      return;
-    }
-
     if (!title || !description || !category || !condition || !priceRange || !type) {
       setError('All fields are required');
       setLoading(false);
@@ -48,38 +43,29 @@ const ItemUpload = ({ onSuccess }) => {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
-      formData.append('category', category);
-      formData.append('type', type);
-      formData.append('condition', condition);
-      formData.append('priceRange', priceRange);
-      formData.append('image', image);
-      formData.append('ownerId', user._id);
-      formData.append('ownerName', user.displayName);
+      const imageUrls = await handleImageUploadComplete();
+      
+      if (!imageUrls) {
+        setLoading(false);
+        return;
+      }
 
-      console.log('Submitting form data:', {
+      const itemData = {
         title,
         description,
         category,
         type,
         condition,
         priceRange,
-        image: image.name,
-        ownerId: user._id,
+        imageUrls,
+        owner: user._id,
         ownerName: user.displayName
-      });
+      };
 
-      const response = await axios.post('/items', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const response = await axios.post('/items', itemData, {
         withCredentials: true
       });
 
-      console.log('Upload successful:', response.data);
-      
       // Reset form
       setTitle('');
       setDescription('');
@@ -87,8 +73,6 @@ const ItemUpload = ({ onSuccess }) => {
       setType('barter');
       setCondition('');
       setPriceRange('');
-      setImage(null);
-      setPreviewUrl('');
       
       // Call success callback if provided
       if (onSuccess) {
@@ -191,20 +175,11 @@ const ItemUpload = ({ onSuccess }) => {
           </select>
         </div>
         <div className="form-group">
-          <label>Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            required
+          <label>Images</label>
+          <ImageUploader
+            onUploadComplete={handleImageUploadComplete}
+            maxFiles={10}
           />
-          {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="Preview"
-              className="image-preview"
-            />
-          )}
         </div>
         <button type="submit" disabled={loading}>
           {loading ? 'Uploading...' : 'Upload Item'}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../contexts/AuthContext';
+import ImageCarousel from '../../components/ImageCarousel';
 import './ItemDetail.css';
 
 const ItemDetail = () => {
@@ -32,11 +33,18 @@ const ItemDetail = () => {
     fetchItem();
   }, [id]);
 
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    console.log("imagePath: " + imagePath);
-    return `http://localhost:${process.env.REACT_APP_API_PORT}${imagePath}`;
+  const getImageUrls = (item) => {
+    if (!item) return [];
+    // Handle new format (imageUrls array)
+    if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+      return item.imageUrls;
+    }
+    // Handle old format (single imageUrl)
+    if (item.imageUrl) {
+      if (item.imageUrl.startsWith('http')) return [item.imageUrl];
+      return [`http://localhost:${process.env.REACT_APP_API_PORT}${item.imageUrl}`];
+    }
+    return [];
   };
 
   const handleStartChat = () => {
@@ -91,9 +99,12 @@ const ItemDetail = () => {
 
   return (
     <div className="item-detail">
+      <button className="back-button" onClick={() => navigate(-1)} aria-label="Go back">
+        ←
+      </button>
       <div className="item-detail-container">
         <div className="item-image">
-          <img src={getImageUrl(item.imageUrl)} alt={item.title} />
+          <ImageCarousel images={getImageUrls(item)} />
           <div className={`type-badge ${item.category}`}>{item.category}</div>
         </div>
         
@@ -130,31 +141,21 @@ const ItemDetail = () => {
         <div className="dialog-overlay" onClick={() => setShowChatDialog(false)}>
           <div className="dialog-content" onClick={e => e.stopPropagation()}>
             <h2>Send Message to {item.owner.username}</h2>
-            <form className="chat-form" onSubmit={e => e.preventDefault()}>
-              <textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder="Write your message here..."
-                rows="4"
-              />
-              <div className="dialog-actions">
-                <button 
-                  type="button" 
-                  className="cancel-button"
-                  onClick={() => setShowChatDialog(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="send-button"
-                  onClick={handleSendMessage}
-                  disabled={!message.trim() || sending}
-                >
-                  {sending ? 'Sending...' : 'Send Message'}
-                </button>
-              </div>
-            </form>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Write your message here..."
+              rows={4}
+            />
+            <div className="dialog-actions">
+              <button onClick={() => setShowChatDialog(false)}>Cancel</button>
+              <button 
+                onClick={handleSendMessage}
+                disabled={sending || !message.trim()}
+              >
+                {sending ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
           </div>
         </div>
       )}
