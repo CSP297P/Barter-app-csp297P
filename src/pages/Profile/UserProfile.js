@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { getUserItems } from '../../services/mongodb';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import ImageUploader from '../../components/ImageUploader';
+import ImageCarousel from '../../components/ImageCarousel';
 import './UserProfile.css';
 
 const UserProfile = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,6 +28,7 @@ const UserProfile = () => {
   const [priceRange, setPriceRange] = useState('');
   const [image, setImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [uploadedImages, setUploadedImages] = useState([]);
 
   const statusOptions = ['available', 'pending', 'traded'];
 
@@ -53,58 +58,61 @@ const UserProfile = () => {
     }
   };
 
+  const handleImageUploadComplete = async (images) => {
+    if (images && images.length > 0) {
+      setUploadedImages(images);
+      setError('');
+    } else {
+      setError('Please upload at least one image');
+    }
+  };
+
   const handleItemUpload = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    if (!image) {
-      setError('Please select an image');
+    if (uploadedImages.length === 0) {
+      setError('Please upload at least one image');
       setLoading(false);
       return;
     }
 
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
-      formData.append('category', category);
-      formData.append('type', type);
-      formData.append('condition', condition);
-      formData.append('priceRange', priceRange);
-      formData.append('image', image);
-      formData.append('userId', user._id);
-
-      // Log the form data to verify all fields
-      console.log('Form data being sent:', {
+      // Create the item data object matching the schema requirements
+      const itemData = {
         title,
         description,
         category,
         type,
         condition,
-        priceRange
-      });
+        priceRange,
+        imageUrls: uploadedImages.map(img => img.url),
+        owner: user._id
+      };
 
-      const response = await axios.post('/items', formData, {
+      // Make the API call with the correct endpoint and data
+      const response = await axios.post('http://localhost:5001/api/items', itemData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json'
         },
         withCredentials: true
       });
 
-      console.log('Upload response:', response.data);
-      setItems(prevItems => [...prevItems, response.data]);
-      setUploadMode(false);
-      
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setCategory('');
-      setType('barter');
-      setCondition('');
-      setPriceRange('');
-      setImage(null);
-      setPreviewUrl('');
+      if (response.data) {
+        setItems(prevItems => [...prevItems, response.data]);
+        setUploadMode(false);
+        
+        // Reset form
+        setTitle('');
+        setDescription('');
+        setCategory('');
+        setType('barter');
+        setCondition('');
+        setPriceRange('');
+        setUploadedImages([]);
+        setError('');
+      }
     } catch (error) {
       console.error('Upload error:', error.response || error);
       setError(error.response?.data?.message || 'Failed to upload item. Please try again.');
@@ -169,10 +177,18 @@ const UserProfile = () => {
     setItemToDelete(null);
   };
 
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return '';
-    if (imageUrl.startsWith('http')) return imageUrl;
-    return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
+  const getImageUrl = (imageUrls) => {
+    if (!imageUrls || imageUrls.length === 0) return '';
+    // If it's an array of URLs (new format), take the first one
+    if (Array.isArray(imageUrls)) {
+      return imageUrls[0];
+    }
+    // If it's a single URL (old format)
+    if (typeof imageUrls === 'string') {
+      if (imageUrls.startsWith('http')) return imageUrls;
+      return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrls}`;
+    }
+    return '';
   };
 
   const handleStatusChange = async (itemId, newStatus) => {
@@ -242,6 +258,17 @@ const UserProfile = () => {
 
         {uploadMode ? (
           <div className="upload-form">
+            <button 
+              className="back-button" 
+              onClick={() => {
+                setUploadMode(false);
+                setImage(null);
+                setPreviewUrl('');
+              }}
+              aria-label="Go back"
+            >
+              ←
+            </button>
             <h3>Upload New Item</h3>
             <form onSubmit={handleItemUpload}>
               <div className="form-group">
@@ -324,20 +351,11 @@ const UserProfile = () => {
                 </select>
               </div>
               <div className="form-group">
-                <label>Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  required
+                <label>Images</label>
+                <ImageUploader
+                  onUploadComplete={handleImageUploadComplete}
+                  maxFiles={10}
                 />
-                {previewUrl && (
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="image-preview"
-                  />
-                )}
               </div>
               <div className="form-actions">
                 <button type="submit" disabled={loading}>
@@ -372,7 +390,9 @@ const UserProfile = () => {
             {items.map((item) => (
               <div key={item._id} className="item-card">
                 <div className="item-image-container">
-                  <img src={getImageUrl(item.imageUrl)} alt={item.title} />
+                  <ImageCarousel 
+                    images={Array.isArray(item.imageUrls) ? item.imageUrls : [getImageUrl(item.imageUrl)]} 
+                  />
                   <div className="tags-container">
                     <div className="badge-wrapper">
                       <div className="badge-label">TYPE</div>
@@ -410,13 +430,21 @@ const UserProfile = () => {
                     </select>
                     {updatingStatus === item._id && <span className="status-updating">Updating...</span>}
                   </div>
-                  <button
-                    className="delete-button"
-                    onClick={() => handleDeleteClick(item)}
-                    disabled={deletingItemId === item._id}
-                  >
-                    {deletingItemId === item._id ? 'Deleting...' : 'Delete Item'}
-                  </button>
+                  <div className="item-actions">
+                    <button
+                      className="edit-button"
+                      onClick={() => navigate(`/item/${item._id}/edit`)}
+                    >
+                      Edit Item
+                    </button>
+                    <button
+                      className="delete-button"
+                      onClick={() => handleDeleteClick(item)}
+                      disabled={deletingItemId === item._id}
+                    >
+                      {deletingItemId === item._id ? 'Deleting...' : 'Delete Item'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
