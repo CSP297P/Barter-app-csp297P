@@ -35,9 +35,15 @@ const itemSchema = new mongoose.Schema({
     required: [true, 'Price range is required'],
     trim: true
   },
-  imageUrl: {
-    type: String,
-    required: [true, 'Image URL is required']
+  imageUrls: {
+    type: [String],
+    required: [true, 'At least one image is required'],
+    validate: {
+      validator: function(v) {
+        return v.length > 0;
+      },
+      message: 'At least one image is required'
+    }
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,

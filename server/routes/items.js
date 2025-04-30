@@ -30,27 +30,14 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create new item
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    console.log('Full request body:', req.body);
-    console.log('File:', req.file);
-    console.log('User:', req.user);
+    const { title, description, category, type, condition, priceRange, imageUrls } = req.body;
 
-    if (!req.file) {
-      console.error('No file uploaded');
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    const { title, description, category, type, condition, priceRange } = req.body;
-    console.log("Extracted fields:", { title, description, category, type, condition, priceRange });
-
-    if (!title || !description || !category || !condition || !type || !priceRange) {
-      console.error('Missing required fields:', { title, description, category, condition, type, priceRange });
+    if (!title || !description || !category || !condition || !type || !priceRange || !imageUrls || imageUrls.length === 0) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    
     const itemData = {
       title,
       description,
@@ -58,16 +45,12 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       condition,
       type,
       priceRange,
-      imageUrl,
+      imageUrls,
       owner: req.user.userId
     };
     
-    console.log("Creating item with data:", itemData);
     const item = new Item(itemData);
-    console.log("Created item instance:", item);
-
     const savedItem = await item.save();
-    console.log('Item saved successfully:', savedItem);
     
     res.status(201).json(savedItem);
   } catch (error) {
@@ -81,8 +64,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
     }
     res.status(500).json({ 
       message: 'Error creating item',
-      error: error.message,
-      stack: error.stack 
+      error: error.message
     });
   }
 });
@@ -146,10 +128,12 @@ router.delete('/:id', async (req, res) => {
     await Item.findByIdAndDelete(req.params.id);
     
     // Delete the associated image file if it exists
-    if (item.imageUrl) {
-      const imagePath = path.join(__dirname, '..', 'uploads', path.basename(item.imageUrl));
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+    if (item.imageUrls && item.imageUrls.length > 0) {
+      for (const imageUrl of item.imageUrls) {
+        const imagePath = path.join(__dirname, '..', 'uploads', path.basename(imageUrl));
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
       }
     }
 
