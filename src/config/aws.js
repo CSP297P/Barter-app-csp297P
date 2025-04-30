@@ -3,7 +3,7 @@ import { S3 } from '@aws-sdk/client-s3';
 // Validate required environment variables
 const requiredEnvVars = [
   'REACT_APP_AWS_ACCESS_KEY_ID',
-  'REACT_APP_AWS_SECRET_ACCESS_KEY',
+  'REACT_APP_AWS_S_ACCESS_KEY',
   'REACT_APP_AWS_REGION',
   'REACT_APP_S3_BUCKET_NAME'
 ];
