@@ -116,18 +116,21 @@ const EditItem = () => {
     setLoading(true);
 
     try {
-      // Create a copy of the current item data
+      // Create a copy of the current item data with all fields
       const updatedData = {
-        ...item,
-        imageUrls: currentImages.map(img => img.url)
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        type: item.type,
+        condition: item.condition,
+        priceRange: item.priceRange,
+        imageUrls: currentImages.map(img => img.url),
+        status: item.status
       };
 
-      console.log('Updating item with data:', {
-        imageUrls: updatedData.imageUrls,
-        imageCount: updatedData.imageUrls.length
-      });
+      console.log('Updating item with data:', updatedData);
 
-      // Single attempt to update
+      // Update the item
       const result = await updateItem(id, updatedData);
 
       // Update the item state with the result

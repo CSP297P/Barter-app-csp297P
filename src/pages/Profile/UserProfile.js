@@ -180,6 +180,7 @@ const UserProfile = () => {
   const getImageUrl = (imageUrls) => {
     if (!imageUrls || imageUrls.length === 0) return '';
     // If it's an array of URLs (new format), take the first one
+    console.log('imageUrls:', imageUrls);
     if (Array.isArray(imageUrls)) {
       return imageUrls[0];
     }
@@ -355,6 +356,7 @@ const UserProfile = () => {
                 <ImageUploader
                   onUploadComplete={handleImageUploadComplete}
                   maxFiles={10}
+                  userId={user._id}
                 />
               </div>
               <div className="form-actions">
