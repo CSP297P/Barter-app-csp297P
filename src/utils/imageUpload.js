@@ -65,10 +65,8 @@ const generateUniqueKey = (file, productId = null) => {
   const randomString = Math.random().toString(36).substring(2, 8);
   const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   
-  // If productId is provided, organize in product-specific folder
-  const folderPath = productId 
-    ? `products/${productId}/images/`
-    : `${AWS_CONFIG.uploadFolderPath}temp/`;
+  // Use images/temp/ as the base path
+  const folderPath = `${AWS_CONFIG.uploadFolderPath}temp/`;
     
   return `${folderPath}${timestamp}_${randomString}_${sanitizedFileName}`;
 };

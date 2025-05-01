@@ -71,8 +71,15 @@ export const createItem = async (itemData) => {
 };
 
 export const updateItem = async (id, itemData) => {
-  const response = await axios.put(`/items/${id}`, itemData);
-  return response.data;
+  try {
+    console.log('Sending update request with data:', itemData);
+    const response = await axios.put(`/items/${id}`, itemData);
+    console.log('Update response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating item:', error);
+    throw error;
+  }
 };
 
 export const deleteItem = async (id) => {
