@@ -14,6 +14,7 @@ import UserProfile from './pages/Profile/UserProfile';
 import ItemUpload from './pages/Items/ItemUpload';
 import Marketplace from './pages/Items/Marketplace';
 import EditItem from './pages/Items/EditItem';
+import Messages from './pages/Messages/Messages';
 
 // Components
 import Navbar from './components/Navbar';
@@ -94,6 +95,14 @@ function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <ItemUpload />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
                 </ProtectedRoute>
               }
             />

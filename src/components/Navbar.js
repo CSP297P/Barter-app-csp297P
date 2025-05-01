@@ -25,6 +25,7 @@ const Navbar = () => {
         <Link to="/marketplace">Marketplace</Link>
         {user ? (
           <>
+            <Link to="/messages">Messages</Link>
             <Link to="/profile">My Profile</Link>
             <button onClick={handleLogout}>Logout</button>
           </>
