@@ -23,21 +23,40 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { AuthContext } from '../../contexts/AuthContext';
 
-// Root container to take full viewport width
 const RootContainer = styled('div')({
-  width: '100vw',
-  position: 'relative',
-  left: '50%',
-  right: '50%',
-  marginLeft: '-50vw',
-  marginRight: '-50vw',
-  height: 'calc(100vh - 64px)', // Adjust based on your navbar height
+  position: 'fixed',
+  top: '64px', // Height of navbar
+  left: 0,
+  right: 0,
+  bottom: 0,
   overflow: 'hidden'
 });
 
-const ChatContainer = styled(Box)({
+const ChatContainer = styled('div')({
+  display: 'flex',
   height: '100%',
-  display: 'flex'
+  width: '100%',
+  gap: '16px',
+  padding: '16px',
+  boxSizing: 'border-box'
+});
+
+const LeftPane = styled('div')({
+  width: '25%',
+  height: '100%',
+  flexShrink: 0
+});
+
+const MiddlePane = styled('div')({
+  width: '50%',
+  height: '100%',
+  flexShrink: 0
+});
+
+const RightPane = styled('div')({
+  width: '25%',
+  height: '100%',
+  flexShrink: 0
 });
 
 const ConversationsList = styled(Paper)({
@@ -47,9 +66,19 @@ const ConversationsList = styled(Paper)({
   overflow: 'hidden'
 });
 
-const ConversationsListContent = styled(List)({
+const ScrollableContent = styled('div')({
+  flex: 1,
   overflowY: 'auto',
-  flex: 1
+  '&::-webkit-scrollbar': {
+    width: '6px'
+  },
+  '&::-webkit-scrollbar-track': {
+    background: '#f1f1f1'
+  },
+  '&::-webkit-scrollbar-thumb': {
+    background: '#888',
+    borderRadius: '3px'
+  }
 });
 
 const ChatBox = styled(Paper)({
@@ -59,19 +88,13 @@ const ChatBox = styled(Paper)({
   overflow: 'hidden'
 });
 
-const MessagesList = styled(Box)({
-  flex: 1,
-  overflowY: 'auto',
-  padding: '16px'
-});
-
-const MessageInputContainer = styled('div')(({ theme }) => ({
+const MessageInputContainer = styled('div')({
   display: 'flex',
-  padding: theme.spacing(2),
-  borderTop: `1px solid ${theme.palette.divider}`,
-  gap: theme.spacing(2),
-  backgroundColor: theme.palette.background.paper
-}));
+  padding: '16px',
+  borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+  gap: '16px',
+  backgroundColor: '#fff'
+});
 
 const StyledTextField = styled(TextField)({
   flex: 1
@@ -86,13 +109,8 @@ const SendButton = styled(IconButton)({
 const TradePanel = styled(Paper)({
   height: '100%',
   display: 'flex',
-  flexDirection: 'column'
-});
-
-const TradePanelContent = styled('div')({
-  flex: 1,
-  overflowY: 'auto',
-  padding: '16px'
+  flexDirection: 'column',
+  overflow: 'hidden'
 });
 
 const Message = styled(Box)(({ theme, isOwn }) => ({
@@ -212,15 +230,15 @@ function Messages() {
   return (
     <RootContainer>
       <ChatContainer>
-        <Grid container spacing={2} style={{ height: '100%', margin: 0, width: '100%' }}>
-          {/* Conversations List - 25% width */}
-          <Grid item style={{ width: '25%', height: '100%', padding: '8px' }}>
-            <ConversationsList elevation={2}>
-              <Box p={2}>
-                <Typography variant="h6">Messages</Typography>
-              </Box>
-              <Divider />
-              <ConversationsListContent>
+        {/* Left Pane - Conversations */}
+        <LeftPane>
+          <ConversationsList elevation={2}>
+            <Box p={2}>
+              <Typography variant="h6">Messages</Typography>
+            </Box>
+            <Divider />
+            <ScrollableContent>
+              <List>
                 {conversations.map((conversation) => (
                   <React.Fragment key={conversation.id}>
                     <ListItem
@@ -241,20 +259,22 @@ function Messages() {
                     <Divider />
                   </React.Fragment>
                 ))}
-              </ConversationsListContent>
-            </ConversationsList>
-          </Grid>
+              </List>
+            </ScrollableContent>
+          </ConversationsList>
+        </LeftPane>
 
-          {/* Chat Area - 50% width */}
-          <Grid item style={{ width: '50%', height: '100%', padding: '8px' }}>
-            <ChatBox elevation={2}>
-              {selectedConversation ? (
-                <>
+        {/* Middle Pane - Chat */}
+        <MiddlePane>
+          <ChatBox elevation={2}>
+            {selectedConversation ? (
+              <>
+                <Box p={2}>
+                  <Typography variant="h6">{selectedConversation.user.name}</Typography>
+                </Box>
+                <Divider />
+                <ScrollableContent>
                   <Box p={2}>
-                    <Typography variant="h6">{selectedConversation.user.name}</Typography>
-                  </Box>
-                  <Divider />
-                  <MessagesList>
                     {messages.map((message) => (
                       <Message key={message.id} isOwn={message.sender === 'user'}>
                         <MessageContent isOwn={message.sender === 'user'}>
@@ -265,53 +285,55 @@ function Messages() {
                         </MessageContent>
                       </Message>
                     ))}
-                  </MessagesList>
-                  <MessageInputContainer>
-                    <StyledTextField
-                      variant="outlined"
-                      placeholder="Type a message..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      size="small"
-                    />
-                    <SendButton
-                      onClick={handleSendMessage}
-                      color="primary"
-                      sx={{
-                        backgroundColor: theme => theme.palette.primary.main,
-                        color: 'white',
-                        '&:hover': {
-                          backgroundColor: theme => theme.palette.primary.dark,
-                        }
-                      }}
-                    >
-                      <SendIcon />
-                    </SendButton>
-                  </MessageInputContainer>
-                </>
-              ) : (
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  height="100%"
-                >
-                  <Typography variant="body1" color="textSecondary">
-                    Select a conversation to start messaging
-                  </Typography>
-                </Box>
-              )}
-            </ChatBox>
-          </Grid>
-
-          {/* Trade Panel - 25% width */}
-          <Grid item style={{ width: '25%', height: '100%', padding: '8px' }}>
-            <TradePanel elevation={2}>
-              <Box p={2}>
-                <Typography variant="h6">Trade Details</Typography>
+                  </Box>
+                </ScrollableContent>
+                <MessageInputContainer>
+                  <StyledTextField
+                    variant="outlined"
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    size="small"
+                  />
+                  <SendButton
+                    onClick={handleSendMessage}
+                    color="primary"
+                    sx={{
+                      backgroundColor: theme => theme.palette.primary.main,
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: theme => theme.palette.primary.dark,
+                      }
+                    }}
+                  >
+                    <SendIcon />
+                  </SendButton>
+                </MessageInputContainer>
+              </>
+            ) : (
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                height="100%"
+              >
+                <Typography variant="body1" color="textSecondary">
+                  Select a conversation to start messaging
+                </Typography>
               </Box>
-              <Divider />
-              <TradePanelContent>
+            )}
+          </ChatBox>
+        </MiddlePane>
+
+        {/* Right Pane - Trade */}
+        <RightPane>
+          <TradePanel elevation={2}>
+            <Box p={2}>
+              <Typography variant="h6">Trade Details</Typography>
+            </Box>
+            <Divider />
+            <ScrollableContent>
+              <Box p={2}>
                 <TradeItemCard item={tradeItems.offering} type="offering" />
                 <TradeItemCard item={tradeItems.receiving} type="receiving" />
                 <Box mt={2}>
@@ -343,11 +365,21 @@ function Messages() {
                       </Button>
                     </Grid>
                   </Grid>
+                  {otherUserConfirmed && (
+                    <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+                      Other user has confirmed the trade
+                    </Typography>
+                  )}
+                  {userConfirmed && otherUserConfirmed && (
+                    <Typography variant="body1" color="success.main" sx={{ mt: 2, textAlign: 'center' }}>
+                      Trade Complete! 🎉
+                    </Typography>
+                  )}
                 </Box>
-              </TradePanelContent>
-            </TradePanel>
-          </Grid>
-        </Grid>
+              </Box>
+            </ScrollableContent>
+          </TradePanel>
+        </RightPane>
       </ChatContainer>
     </RootContainer>
   );

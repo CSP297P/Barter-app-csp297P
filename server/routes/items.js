@@ -72,36 +72,72 @@ router.post('/', auth, async (req, res) => {
 // Update item
 router.put('/:id', auth, async (req, res) => {
   try {
+    console.log('Received update request with data:', req.body);
+    console.log('Item ID:', req.params.id);
+    
     const item = await Item.findById(req.params.id);
     
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' });
+      console.log('Item not found with ID:', req.params.id);
+      return res.status(404).json({ 
+        success: false,
+        message: 'Item not found' 
+      });
     }
 
     // Check if user is the owner
     if (item.owner.toString() !== req.user.userId) {
-      return res.status(403).json({ message: 'Not authorized to update this item' });
+      console.log('Unauthorized update attempt. User:', req.user.userId, 'Owner:', item.owner.toString());
+      return res.status(403).json({ 
+        success: false,
+        message: 'Not authorized to update this item' 
+      });
     }
 
-    const { status } = req.body;
+    const { title, description, category, type, condition, priceRange, imageUrls, status } = req.body;
     
-    // Validate status value
-    if (status && !['available', 'pending', 'traded'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status value' });
+    // Validate required fields
+    if (!title || !description || !category || !condition || !type || !priceRange || !imageUrls || imageUrls.length === 0) {
+      console.log('Missing required fields:', { title, description, category, condition, type, priceRange, imageUrls });
+      return res.status(400).json({ 
+        success: false,
+        message: 'All fields are required' 
+      });
     }
 
-    const updatedItem = await Item.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    ).populate('owner', 'displayName');
+    // Validate status value if provided
+    if (status && !['available', 'pending', 'traded'].includes(status)) {
+      console.log('Invalid status value:', status);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid status value' 
+      });
+    }
 
-    console.log('Item status updated:', updatedItem);
+    // Update the item
+    item.title = title;
+    item.description = description;
+    item.category = category;
+    item.type = type;
+    item.condition = condition;
+    item.priceRange = priceRange;
+    item.imageUrls = imageUrls;
+    if (status) item.status = status;
+
+    // Save the updated item
+    const updatedItem = await item.save();
+    console.log('Item updated successfully:', updatedItem);
+
+    // Populate owner field
+    await updatedItem.populate('owner', 'displayName');
+    
+    // Send response with the updated item
     res.json(updatedItem);
   } catch (error) {
-    console.error('Error updating item status:', error);
+    console.error('Error updating item:', error);
     res.status(500).json({ 
-      message: 'Error updating item status',
+      success: false,
+      message: 'Error updating item',
       error: error.message 
     });
   }
