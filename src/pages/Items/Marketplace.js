@@ -4,6 +4,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import axios from 'axios';
 import './Marketplace.css';
 import ItemUpload from './ItemUpload';
+import ImageCarousel from '../../components/ImageCarousel';
 
 const Marketplace = () => {
   const [items, setItems] = useState([]);
@@ -66,8 +67,19 @@ const Marketplace = () => {
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    console.log("API PORT: " + process.env.REACT_APP_API_PORT);
     return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
+  };
+
+  const getImageUrls = (item) => {
+    // Handle new format (imageUrls array)
+    if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+      return item.imageUrls;
+    }
+    // Handle old format (single imageUrl)
+    if (item.imageUrl) {
+      return [getImageUrl(item.imageUrl)];
+    }
+    return [];
   };
 
   const handleCategoryChange = (category) => {
@@ -194,7 +206,7 @@ const Marketplace = () => {
               {filteredItems.map((item) => (
                 <Link to={`/item/${item._id}`} key={item._id} className="item-card">
                   <div className="item-image-container">
-                    <img src={getImageUrl(item.imageUrl)} alt={item.title} />
+                    <ImageCarousel images={getImageUrls(item)} />
                     {item.status !== 'available' && (
                       <div className={`status-badge ${item.status}`}>
                         {item.status}

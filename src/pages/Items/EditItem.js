@@ -2,15 +2,19 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import { getItemById, updateItem } from '../../services/mongodb';
+import ImageUploader from '../../components/ImageUploader';
 import './EditItem.css';
 
 const EditItem = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [item, setItem] = useState(null);
+  const [originalItem, setOriginalItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const { user } = useContext(AuthContext);
+  const [currentImages, setCurrentImages] = useState([]);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -21,6 +25,14 @@ const EditItem = () => {
           return;
         }
         setItem(data);
+        setOriginalItem(data);
+        // Initialize currentImages with existing images
+        if (Array.isArray(data.imageUrls)) {
+          setCurrentImages(data.imageUrls.map((url, index) => ({
+            file: `image-${index}`,
+            url: url
+          })));
+        }
       } catch (error) {
         setError('Failed to load item');
         console.error('Error fetching item:', error);
@@ -32,23 +44,110 @@ const EditItem = () => {
     fetchItem();
   }, [id, user, navigate]);
 
+  const hasUnsavedChanges = () => {
+    if (!item || !originalItem) return false;
+    return (
+      item.title !== originalItem.title ||
+      item.description !== originalItem.description ||
+      item.category !== originalItem.category ||
+      item.condition !== originalItem.condition ||
+      JSON.stringify(item.imageUrls) !== JSON.stringify(originalItem.imageUrls)
+    );
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [item, originalItem]);
+
+  const handleBack = () => {
+    if (hasUnsavedChanges()) {
+      setShowUnsavedDialog(true);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleImageUploadComplete = async (uploadedImages) => {
+    if (!uploadedImages || uploadedImages.length === 0) {
+      setError('Please upload at least one image');
+      return;
+    }
+
+    console.log('Received uploaded images:', uploadedImages);
+
+    // Filter out any invalid image objects and ensure URLs are unique
+    const validImages = uploadedImages.filter(img => img && img.url);
+    const uniqueImages = Array.from(new Set(validImages.map(img => img.url)))
+      .map(url => validImages.find(img => img.url === url));
+
+    if (uniqueImages.length === 0) {
+      setError('No valid images were uploaded');
+      return;
+    }
+
+    // Update currentImages state with the full image objects
+    setCurrentImages(uniqueImages);
+
+    // Update the item state with just the URLs
+    const imageUrls = uniqueImages.map(img => img.url);
+    console.log('Setting image URLs:', imageUrls);
+    
+    setItem(prev => {
+      const updated = {
+        ...prev,
+        imageUrls: imageUrls
+      };
+      console.log('Updated item state:', updated);
+      return updated;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await updateItem(id, {
-        title: item.title,
-        description: item.description,
-        category: item.category,
-        condition: item.condition,
-        imageUrl: item.imageUrl
+      // Create a copy of the current item data
+      const updatedData = {
+        ...item,
+        imageUrls: currentImages.map(img => img.url)
+      };
+
+      console.log('Updating item with data:', {
+        imageUrls: updatedData.imageUrls,
+        imageCount: updatedData.imageUrls.length
       });
-      navigate(`/items/${id}`);
+
+      // Single attempt to update
+      const result = await updateItem(id, updatedData);
+
+      // Update the item state with the result
+      setItem(result);
+      setOriginalItem(result);
+      
+      // Update currentImages with the received URLs
+      if (Array.isArray(result.imageUrls)) {
+        setCurrentImages(result.imageUrls.map((url, index) => ({
+          file: `image-${index}`,
+          url: url
+        })));
+      }
+
+      // Navigate away
+      navigate('/profile');
     } catch (error) {
-      setError('Failed to update item');
-      console.error('Error updating item:', error);
+      const errorMessage = `Failed to update item: ${error.message}`;
+      console.error(errorMessage, error);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -66,17 +165,18 @@ const EditItem = () => {
     return <div className="loading">Loading...</div>;
   }
 
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-
   if (!item) {
     return <div className="error">Item not found</div>;
   }
 
   return (
     <div className="edit-item">
-      <h2>Edit Item</h2>
+      <div className="edit-header">
+        <button className="back-button" onClick={handleBack}>
+          ←
+        </button>
+        <h2>Edit Item</h2>
+      </div>
       {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -100,13 +200,24 @@ const EditItem = () => {
         </div>
         <div className="form-group">
           <label>Category</label>
-          <input
-            type="text"
+          <select
             name="category"
             value={item.category}
             onChange={handleChange}
             required
-          />
+          >
+            <option value="">Select Category</option>
+            <option value="gaming-console">Gaming Console</option>
+            <option value="sports-equipment">Sports Equipment</option>
+            <option value="electronics">Electronics</option>
+            <option value="books">Books</option>
+            <option value="clothing">Clothing</option>
+            <option value="furniture">Furniture</option>
+            <option value="musical-instruments">Musical Instruments</option>
+            <option value="tools">Tools</option>
+            <option value="art-supplies">Art Supplies</option>
+            <option value="other">Other</option>
+          </select>
         </div>
         <div className="form-group">
           <label>Condition</label>
@@ -124,19 +235,45 @@ const EditItem = () => {
           </select>
         </div>
         <div className="form-group">
-          <label>Image URL</label>
-          <input
-            type="url"
-            name="imageUrl"
-            value={item.imageUrl}
-            onChange={handleChange}
-            required
+          <label>Images</label>
+          <ImageUploader
+            onUploadComplete={handleImageUploadComplete}
+            maxFiles={10}
+            initialImages={currentImages}
           />
         </div>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
+        <div className="form-actions">
+          <button type="button" className="cancel-button" onClick={handleBack}>
+            Cancel
+          </button>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
       </form>
+
+      {showUnsavedDialog && (
+        <div className="dialog-overlay" onClick={() => setShowUnsavedDialog(false)}>
+          <div className="dialog-content" onClick={e => e.stopPropagation()}>
+            <h2>Unsaved Changes</h2>
+            <p>You have unsaved changes. Are you sure you want to leave?</p>
+            <div className="dialog-actions">
+              <button 
+                className="cancel-button"
+                onClick={() => setShowUnsavedDialog(false)}
+              >
+                Stay
+              </button>
+              <button 
+                className="confirm-button"
+                onClick={() => navigate(-1)}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
