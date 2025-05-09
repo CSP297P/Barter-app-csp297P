@@ -8,6 +8,10 @@ const authRoutes = require('./routes/auth');
 const itemRoutes = require('./routes/items');
 const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chats');
+const tradeSessionRoutes = require('./routes/tradeSessions');
+const messageRoutes = require('./routes/messages');
+const http = require('http');
+const initializeSocketService = require('./services/socketService');
 
 dotenv.config();
 
@@ -40,6 +44,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/trade-sessions', tradeSessionRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -47,7 +53,19 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
+const server = http.createServer(app);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Initialize Socket.IO service
+initializeSocketService(io);
+
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 

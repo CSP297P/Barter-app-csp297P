@@ -1,0 +1,75 @@
+const Message = require('../models/Message');
+const TradeSession = require('../models/TradeSession');
+
+const initializeSocketService = (io) => {
+  io.on('connection', (socket) => {
+    // Join trade session room
+    socket.on('join_trade_session', async ({ sessionId }) => {
+      try {
+        const session = await TradeSession.findById(sessionId).exec();
+        if (!session) {
+          socket.emit('error', { message: 'Trade session not found' });
+          return;
+        }
+
+        const roomId = `trade_session_${sessionId}`;
+        socket.join(roomId);
+        socket.emit('joined_session', { sessionId });
+
+        // Mark all messages in this session as read
+        await Message.updateMany(
+          {
+            sessionId,
+            read: false,
+            senderId: { $ne: socket.userId }
+          },
+          { read: true }
+        );
+      } catch (error) {
+        console.error('Error joining trade session:', error);
+        socket.emit('error', { message: 'Error joining trade session' });
+      }
+    });
+
+    // Handle new messages
+    socket.on('new_message', async ({ sessionId, content, senderId }) => {
+      try {
+        const session = await TradeSession.findById(sessionId).exec();
+        if (!session) {
+          socket.emit('error', { message: 'Trade session not found' });
+          return;
+        }
+
+        // Validate sender is a participant
+        if (!session.participants.some(p => p.toString() === senderId.toString())) {
+          socket.emit('error', { message: 'Not authorized to send messages in this session' });
+          return;
+        }
+
+        // Create and save message
+        const message = await Message.create({
+          sessionId,
+          senderId,
+          content: content.trim(),
+          read: false
+        });
+
+        // Emit message to all participants in the room
+        const roomId = `trade_session_${sessionId}`;
+        io.to(roomId).emit('message_received', message);
+      } catch (error) {
+        console.error('Error sending message:', error);
+        socket.emit('error', { message: 'Error sending message' });
+      }
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+      // Clean up if needed
+    });
+  });
+
+  return io;
+};
+
+module.exports = initializeSocketService; 
