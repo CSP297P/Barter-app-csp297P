@@ -1,0 +1,424 @@
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { AuthContext } from '../../contexts/AuthContext';
+import { useSocket } from '../../hooks/useSocket';
+import config from '../../config';
+import './Messages.css';
+
+const Messages = () => {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const { joinTradeSession, sendMessage, isConnected, onMessage } = useSocket();
+
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: "smooth",
+        block: "end"
+      });
+    }
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  // Fetch all conversations
+  useEffect(() => {
+    const fetchConversations = async () => {
+      try {
+        const response = await axios.get(`${config.API_BASE_URL}/trade-sessions/user`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setConversations(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load conversations');
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+  }, []);
+
+  // Handle incoming messages
+  const handleNewMessage = useCallback((message) => {
+    setMessages(prevMessages => {
+      if (prevMessages.some(msg => msg._id === message._id)) {
+        return prevMessages;
+      }
+      return [...prevMessages, message];
+    });
+
+    // Update unread count if message is from other user
+    if (message.sender !== user._id) {
+      setUnreadCounts(prev => ({
+        ...prev,
+        [message.sessionId]: (prev[message.sessionId] || 0) + 1
+      }));
+    }
+  }, [user._id]);
+
+  // Set up message listener
+  useEffect(() => {
+    const unsubscribe = onMessage(handleNewMessage);
+    return () => unsubscribe();
+  }, [onMessage, handleNewMessage]);
+
+  // Join selected conversation
+  useEffect(() => {
+    if (selectedConversation && isConnected) {
+      joinTradeSession(selectedConversation._id);
+      // Reset unread count when selecting conversation
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedConversation._id]: 0
+      }));
+    }
+  }, [selectedConversation, isConnected, joinTradeSession]);
+
+  // Fetch messages for selected conversation
+  useEffect(() => {
+    if (selectedConversation) {
+      const fetchMessages = async () => {
+        try {
+          const response = await axios.get(`${config.API_BASE_URL}/messages/session/${selectedConversation._id}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          setMessages(response.data);
+          // Scroll after a short delay to ensure the container is rendered
+          setTimeout(scrollToBottom, 100);
+        } catch (err) {
+          setError('Failed to load messages');
+        }
+      };
+
+      fetchMessages();
+    }
+  }, [selectedConversation]);
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    setSending(true);
+    try {
+      await sendMessage(selectedConversation._id, newMessage, user._id);
+      setNewMessage('');
+    } catch (err) {
+      setError('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDeleteConversation = async (sessionId) => {
+    if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${config.API_BASE_URL}/trade-sessions/${sessionId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      // Remove the conversation from the list
+      setConversations(prev => prev.filter(conv => conv._id !== sessionId));
+      
+      // If the deleted conversation was selected, clear the selection
+      if (selectedConversation?._id === sessionId) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      setError('Failed to delete conversation');
+    }
+  };
+
+  // Helper to determine if current user is the requester (User A)
+  const isRequester = selectedConversation && selectedConversation.participants[0]._id === user._id;
+  // Helper to determine if current user is the recipient (User B)
+  const isRecipient = selectedConversation && selectedConversation.participants[1]._id === user._id;
+  const isPending = selectedConversation && selectedConversation.status === 'pending';
+  const isDenied = selectedConversation && selectedConversation.status === 'denied';
+  const isActive = selectedConversation && selectedConversation.status === 'active';
+
+  // Accept/Deny handlers
+  const handleAcceptTrade = async () => {
+    if (!selectedConversation) return;
+    try {
+      await axios.put(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}/status`, { status: 'active' }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setSelectedConversation({ ...selectedConversation, status: 'active' });
+      // Optionally refetch conversations
+      setConversations(prev => prev.map(conv => conv._id === selectedConversation._id ? { ...conv, status: 'active' } : conv));
+    } catch (err) {
+      setError('Failed to accept trade request');
+    }
+  };
+  const handleDenyTrade = async () => {
+    if (!selectedConversation) return;
+    try {
+      await axios.put(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}/status`, { status: 'denied' }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setSelectedConversation({ ...selectedConversation, status: 'denied' });
+      setConversations(prev => prev.map(conv => conv._id === selectedConversation._id ? { ...conv, status: 'denied' } : conv));
+    } catch (err) {
+      setError('Failed to deny trade request');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner" />
+        <p>Loading conversations...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="error-message">{error}</div>;
+  }
+
+  return (
+    <div className="messages-page">
+      {/* Conversations Panel */}
+      <div className="conversations-panel">
+        <h2>Conversations</h2>
+        <div className="conversations-list">
+          {conversations.map(conv => (
+            <div
+              key={conv._id}
+              className={`conversation-item ${selectedConversation?._id === conv._id ? 'selected' : ''}`}
+            >
+              <div 
+                className="conversation-preview"
+                onClick={() => setSelectedConversation(conv)}
+              >
+                <h3>{conv.item.title}</h3>
+                <p>with {conv.participants.find(p => p._id !== user._id)?.displayName}</p>
+                {conv.status === 'pending' && (
+                  <span className="pending-badge">Pending</span>
+                )}
+                {conv.status === 'denied' && (
+                  <span className="denied-badge">Denied</span>
+                )}
+              </div>
+              <div className="conversation-actions">
+                {unreadCounts[conv._id] > 0 && (
+                  <div className="unread-badge">{unreadCounts[conv._id]}</div>
+                )}
+                <button
+                  className="delete-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteConversation(conv._id);
+                  }}
+                  title="Delete conversation"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Messages Panel */}
+      <div className="messages-panel">
+        {selectedConversation ? (
+          <>
+            <div className="messages-header">
+              {selectedConversation
+                ? `Chat with ${selectedConversation.participants.find(p => p._id !== user._id)?.displayName || 'User'}`
+                : 'Chat'}
+            </div>
+            <div className="messages-container">
+              {isPending ? (
+                isRecipient ? (
+                  <div className="pending-actions">
+                    <p>This user wants to trade for your item. Accept or deny the request to start chatting.</p>
+                    <button className="accept-button" onClick={handleAcceptTrade}>Accept</button>
+                    <button className="deny-button" onClick={handleDenyTrade}>Deny</button>
+                  </div>
+                ) : (
+                  <div className="pending-info">
+                    <p>Waiting for the other user to accept or deny your trade request.</p>
+                  </div>
+                )
+              ) : isDenied ? (
+                <div className="denied-info">
+                  <p>This trade request was denied.</p>
+                </div>
+              ) : isActive ? (
+                messages.length === 0 ? (
+                  <div className="no-messages">No messages yet. Start the conversation!</div>
+                ) : (
+                  <>
+                    {messages.map(msg => {
+                      const isSent = msg.senderId === user._id;
+                      let formattedDate = 'Just now';
+                      if (msg.timestamp) {
+                        const dateObj = new Date(msg.timestamp);
+                        if (!isNaN(dateObj.getTime())) {
+                          formattedDate = dateObj.toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: 'numeric',
+                            hour12: true
+                          });
+                        } else {
+                          formattedDate = String(msg.timestamp); // fallback to raw value
+                        }
+                      }
+                      return (
+                        <div
+                          key={msg._id}
+                          className={`message ${isSent ? 'sent' : 'received'}`}
+                          style={{
+                            backgroundColor: isSent ? '#4285f4' : '#f1f1f1',
+                            color: isSent ? 'white' : '#333',
+                            alignSelf: isSent ? 'flex-end' : 'flex-start',
+                            marginLeft: isSent ? 'auto' : '0',
+                            marginRight: isSent ? '0' : 'auto',
+                            borderRadius: '15px',
+                            borderBottomRightRadius: isSent ? '5px' : '15px',
+                            borderBottomLeftRadius: isSent ? '15px' : '5px',
+                            padding: '12px 16px',
+                            maxWidth: '70%',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                          }}
+                        >
+                          <p style={{ margin: 0, wordWrap: 'break-word', fontSize: '14px', lineHeight: '1.4' }}>
+                            {msg.content}
+                          </p>
+                          <small style={{
+                            display: 'block',
+                            marginTop: '6px',
+                            fontSize: '11px',
+                            opacity: 0.8,
+                            color: isSent ? 'rgba(255, 255, 255, 0.9)' : '#666'
+                          }}>
+                            {formattedDate}
+                          </small>
+                        </div>
+                      );
+                    })}
+                    <div ref={messagesEndRef} />
+                  </>
+                )
+              ) : null}
+            </div>
+            {isActive && (
+              <div className="message-input">
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sending || !newMessage.trim()}
+                >
+                  {sending ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="no-conversation-selected">
+            <p>Select a conversation to start messaging</p>
+          </div>
+        )}
+      </div>
+
+      {/* Item Details Panel */}
+      <div className="item-details-panel">
+        {selectedConversation ? (
+          <>
+            <h2>Trade Details</h2>
+            <div className="item-info">
+              <h3>Requested Item</h3>
+              <img
+                src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl}
+                alt={selectedConversation.item.title}
+              />
+              <h4>{selectedConversation.item.title}</h4>
+              <p>{selectedConversation.item.description}</p>
+              <div className="item-meta">
+                <p>Condition: {selectedConversation.item.condition}</p>
+                <p>Status: {selectedConversation.item.status}</p>
+              </div>
+              <button
+                className="view-item-button"
+                onClick={() => navigate(`/item/${selectedConversation.item._id}`)}
+              >
+                View Item
+              </button>
+            </div>
+            {selectedConversation.offeredItems && selectedConversation.offeredItems.length > 0 && (
+              <div className="item-info">
+                <h3>Offered Item(s)</h3>
+                {selectedConversation.offeredItems.map(offered => (
+                  <div key={offered._id} className="offered-item-details">
+                    <img
+                      src={offered.imageUrls?.[0] || offered.imageUrl}
+                      alt={offered.title}
+                    />
+                    <h4>{offered.title}</h4>
+                    <p>{offered.description}</p>
+                    <div className="item-meta">
+                      <p>Condition: {offered.condition}</p>
+                      <p>Status: {offered.status}</p>
+                    </div>
+                    <button
+                      className="view-item-button"
+                      onClick={() => navigate(`/item/${offered._id}`)}
+                    >
+                      View Item
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="no-item-selected">
+            <p>Select a conversation to view item details</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Messages; 

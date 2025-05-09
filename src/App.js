@@ -14,12 +14,14 @@ import UserProfile from './pages/Profile/UserProfile';
 import ItemUpload from './pages/Items/ItemUpload';
 import Marketplace from './pages/Items/Marketplace';
 import EditItem from './pages/Items/EditItem';
+import Messages from './pages/Messages/Messages';
 
 // Components
 import Navbar from './components/Navbar';
 
 // Context
 import { AuthContext, AuthProvider } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 const theme = createTheme({
   palette: {
@@ -97,6 +99,14 @@ function AppRoutes() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </MainContent>
@@ -110,7 +120,9 @@ function App() {
     <MuiThemeProvider theme={theme}>
       <StyledThemeProvider theme={theme}>
         <AuthProvider>
-          <AppRoutes />
+          <SocketProvider>
+            <AppRoutes />
+          </SocketProvider>
         </AuthProvider>
       </StyledThemeProvider>
     </MuiThemeProvider>
