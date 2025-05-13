@@ -6,6 +6,17 @@ const upload = require('../middleware/upload');
 const path = require('path');
 const fs = require('fs');
 
+// Get all available items for the authenticated user
+router.get('/user/available', auth, async (req, res) => {
+  try {
+    const items = await Item.find({ owner: req.user.userId, status: 'available' })
+      .populate('owner', 'displayName');
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user items' });
+  }
+});
+
 // Get all items
 router.get('/', async (req, res) => {
   try {
