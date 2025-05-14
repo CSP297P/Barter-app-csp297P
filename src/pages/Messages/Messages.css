@@ -3,7 +3,6 @@ html, body, #root, .App {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
   background: #f4f7fb;
 }
 
@@ -658,4 +657,82 @@ html, body, #root, .App {
 
 .item-info-section {
   gap: 8px !important;
+}
+
+/* Add styles for the chat request state */
+.chat-request-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(66, 133, 244, 0.08);
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.chat-request-message {
+  font-size: 1.25rem;
+  color: #232946;
+  margin-bottom: 2rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.chat-request-actions {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.chat-request-btn {
+  padding: 0.7rem 2.2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.10);
+}
+
+.chat-request-btn.accept {
+  background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+  color: #fff;
+}
+.chat-request-btn.accept:hover {
+  background: linear-gradient(90deg, #38f9d7 0%, #43e97b 100%);
+  transform: translateY(-2px) scale(1.04);
+}
+
+.chat-request-btn.reject {
+  background: linear-gradient(90deg, #ff5858 0%, #f09819 100%);
+  color: #fff;
+}
+.chat-request-btn.reject:hover {
+  background: linear-gradient(90deg, #f09819 0%, #ff5858 100%);
+  transform: translateY(-2px) scale(1.04);
+}
+
+@media (max-width: 600px) {
+  .chat-request-container {
+    min-height: 40vh;
+    padding: 1rem 0.5rem;
+    margin: 1rem 0.2rem;
+  }
+  .chat-request-message {
+    font-size: 1.05rem;
+  }
+  .chat-request-actions {
+    flex-direction: column;
+    gap: 0.7rem;
+    width: 100%;
+  }
+  .chat-request-btn {
+    width: 100%;
+    font-size: 1rem;
+    padding: 0.7rem 0;
+  }
 } 
