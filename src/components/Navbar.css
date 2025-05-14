@@ -70,4 +70,29 @@
   justify-content: center;
   font-size: 0.7rem;
   font-weight: bold;
+}
+
+.dark .navbar {
+  background-color: #23272f;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.dark .navbar-brand a {
+  color: #f4f6fa;
+}
+.dark .navbar-links a {
+  color: #f4f6fa;
+}
+.dark .navbar-links a:hover {
+  color: #90caf9;
+}
+.dark .navbar-links button {
+  background-color: #1976d2;
+  color: #fff;
+}
+.dark .navbar-links button:hover {
+  background-color: #1565c0;
+}
+.dark .unread-badge {
+  background: #ef5350;
+  color: #fff;
 } 

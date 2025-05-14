@@ -6,6 +6,16 @@ import { useSocket } from '../../hooks/useSocket';
 import ImageCarousel from '../../components/ImageCarousel';
 import './ItemDetail.css';
 
+const formatPriceRange = (range) => {
+  if (!range) return 'N/A';
+  if (range === '1000+') return '$1000+';
+  if (range.startsWith('$')) return range; // already formatted
+  if (range.includes('/')) return range; // e.g. "$5.99 / lb"
+  const [min, max] = range.split('-');
+  if (min && max) return `$${min} - $${max}`;
+  return `$${range}`;
+};
+
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -253,9 +263,17 @@ const ItemDetail = () => {
       {/* Trade Request Dialog */}
       {showTradeDialog && (
         <div className="dialog-overlay" onClick={() => setShowTradeDialog(false)}>
-          <div className="dialog-content trade-dialog" onClick={e => e.stopPropagation()}>
-            <h2>Select Items to Trade</h2>
-            <p>Choose one or more items you want to offer for {item.title} and write a message to the owner.</p>
+          <div className="dialog-content modern-trade-dialog" onClick={e => e.stopPropagation()}>
+            <button className="close-dialog-btn" onClick={() => setShowTradeDialog(false)} aria-label="Close">
+              &times;
+            </button>
+            <header className="trade-dialog-header">
+              <h2>Select Items to Trade</h2>
+              <div className="trade-dialog-divider" />
+              <div className="trade-dialog-subheading">
+                Choose one or more items you want to offer for <b>{item.title}</b> and write a message to the owner.
+              </div>
+            </header>
             {loadingUserItems ? (
               <div className="loading-container">
                 <div className="loading-spinner" />
@@ -264,43 +282,83 @@ const ItemDetail = () => {
             ) : userItems.length === 0 ? (
               <div className="no-items">
                 <p>You don't have any items available for trade.</p>
-                <button onClick={() => navigate('/item/upload')}>
+                <button onClick={() => navigate('/item/upload')} className="upload-item-btn">
                   Upload an Item
                 </button>
               </div>
             ) : (
-              <>
-                <div className="items-grid">
-                  {userItems.map(userItem => (
-                    <div
-                      key={userItem._id}
-                      className={`item-card ${selectedItems.includes(userItem._id) ? 'selected' : ''}`}
-                      onClick={() => handleItemSelect(userItem._id)}
-                    >
-                      <div className="item-image">
-                        <ImageCarousel images={getImageUrls(userItem)} />
+              <div className="trade-items-row">
+                {userItems.map(userItem => (
+                  <div
+                    key={userItem._id}
+                    className={`item-card tomato-style${selectedItems.includes(userItem._id) ? ' selected' : ''}`}
+                    tabIndex={0}
+                    aria-checked={selectedItems.includes(userItem._id)}
+                    role="checkbox"
+                    onClick={() => handleItemSelect(userItem._id)}
+                    onKeyDown={e => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        handleItemSelect(userItem._id);
+                      }
+                    }}
+                  >
+                    {/* Selection indicator */}
+                    {selectedItems.includes(userItem._id) && (
+                      <div className="selected-indicator">
+                        <span>✔</span>
                       </div>
-                      <div className="item-info">
-                        <h3>{userItem.title}</h3>
-                        <p className="description">{userItem.description}</p>
-                        <p className="condition">{userItem.condition}</p>
+                    )}
+                    <div className="item-image-container tomato-style">
+                      <ImageCarousel images={getImageUrls(userItem)} />
+                    </div>
+                    <div className="item-info tomato-style">
+                      <div className="item-title tomato-style">{userItem.title}</div>
+                      <div className="item-price tomato-style">{formatPriceRange(userItem.priceRange)}</div>
+                      <div className="item-description tomato-style">
+                        {userItem.description}
+                      </div>
+                      <div className="item-tags tomato-style">
+                        <span className={`tag tag-type ${userItem.type}`}>
+                          {userItem.type === 'barter' ? '🔄' : userItem.type === 'giveaway' ? '🎁' : '❓'}{' '}
+                          {userItem.type ? userItem.type.charAt(0).toUpperCase() + userItem.type.slice(1) : 'N/A'}
+                        </span>
+                        <span className={`tag tag-condition ${userItem.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
+                          {userItem.condition === 'New' ? '🆕' :
+                           userItem.condition === 'Like New' ? '✨' :
+                           userItem.condition === 'Good' ? '👍' :
+                           userItem.condition === 'Fair' ? '👌' :
+                           userItem.condition === 'Poor' ? '⚠️' : '❓'}{' '}
+                          {userItem.condition || 'N/A'}
+                        </span>
+                        <span className={`tag tag-category ${userItem.category}`}>
+                          {userItem.category === 'furniture' ? '🛋️' :
+                           userItem.category === 'electronics' ? '💻' :
+                           userItem.category === 'books' ? '📚' :
+                           userItem.category === 'clothing' ? '👕' :
+                           userItem.category === 'sports-equipment' ? '🏀' :
+                           userItem.category === 'musical-instruments' ? '🎸' :
+                           userItem.category === 'tools' ? '🛠️' :
+                           userItem.category === 'art-supplies' ? '🎨' :
+                           userItem.category === 'other' ? '❔' : '❓'}{' '}
+                          {userItem.category || 'N/A'}
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <textarea
-                  className="trade-message-input"
-                  value={initialTradeMessage}
-                  onChange={e => setInitialTradeMessage(e.target.value)}
-                  placeholder="Write a message to the owner..."
-                  rows={6}
-                  style={{ width: '100%', marginTop: '1rem', resize: 'vertical' }}
-                />
-              </>
+                  </div>
+                ))}
+              </div>
             )}
-            <div className="dialog-actions">
-              <button onClick={() => setShowTradeDialog(false)}>Cancel</button>
-              <button 
+            <textarea
+              className="trade-message-input modern-textarea"
+              value={initialTradeMessage}
+              onChange={e => setInitialTradeMessage(e.target.value)}
+              placeholder="Write a message to the owner..."
+              rows={5}
+              aria-label="Message to owner"
+            />
+            <div className="dialog-actions modern-actions">
+              <button onClick={() => setShowTradeDialog(false)} className="modern-cancel-btn">Cancel</button>
+              <button
                 onClick={async () => {
                   if (selectedItems.length === 0) {
                     setError('Please select at least one item to trade');
@@ -330,6 +388,7 @@ const ItemDetail = () => {
                     setError('Failed to create trade request');
                   }
                 }}
+                className="modern-submit-btn"
                 disabled={selectedItems.length === 0}
               >
                 Submit Trade Request

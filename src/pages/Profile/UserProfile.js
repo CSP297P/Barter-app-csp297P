@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ImageUploader from '../../components/ImageUploader';
 import ImageCarousel from '../../components/ImageCarousel';
+import EditItemDialog from '../../components/EditItemDialog';
+import ItemUpload from '../../pages/Items/ItemUpload';
+import { Dialog } from '@mui/material';
 import './UserProfile.css';
 
 const UserProfile = () => {
@@ -13,22 +16,15 @@ const UserProfile = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [uploadMode, setUploadMode] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(null);
   
-  // Item upload states
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [type, setType] = useState('barter');
-  const [condition, setCondition] = useState('');
-  const [priceRange, setPriceRange] = useState('');
-  const [image, setImage] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [uploadedImages, setUploadedImages] = useState([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const statusOptions = ['available', 'pending', 'traded'];
 
@@ -49,77 +45,6 @@ const UserProfile = () => {
 
     fetchUserItems();
   }, [user]);
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  const handleImageUploadComplete = async (images) => {
-    if (images && images.length > 0) {
-      setUploadedImages(images);
-      setError('');
-    } else {
-      setError('Please upload at least one image');
-    }
-  };
-
-  const handleItemUpload = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    if (uploadedImages.length === 0) {
-      setError('Please upload at least one image');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Create the item data object matching the schema requirements
-      const itemData = {
-        title,
-        description,
-        category,
-        type,
-        condition,
-        priceRange,
-        imageUrls: uploadedImages.map(img => img.url),
-        owner: user._id
-      };
-
-      // Make the API call with the correct endpoint and data
-      const response = await axios.post('http://localhost:5001/api/items', itemData, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true
-      });
-
-      if (response.data) {
-        setItems(prevItems => [...prevItems, response.data]);
-        setUploadMode(false);
-        
-        // Reset form
-        setTitle('');
-        setDescription('');
-        setCategory('');
-        setType('barter');
-        setCondition('');
-        setPriceRange('');
-        setUploadedImages([]);
-        setError('');
-      }
-    } catch (error) {
-      console.error('Upload error:', error.response || error);
-      setError(error.response?.data?.message || 'Failed to upload item. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeleteClick = (item) => {
     setItemToDelete(item);
@@ -230,14 +155,25 @@ const UserProfile = () => {
     return <div className="error">Please log in to view your profile</div>;
   }
 
-  if (loading && !uploadMode) {
+  if (loading) {
     return <div className="loading">Loading...</div>;
   }
 
   return (
     <div className="user-profile">
       <div className="profile-header">
-        <h1>My Profile</h1>
+        {/* Profile Avatar */}
+        <div className="profile-avatar">
+          {user.photoURL ? (
+            <img src={user.photoURL} alt={user.displayName} />
+          ) : (
+            <span>
+              {user.displayName
+                ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
+                : <i className="fa fa-user" />}
+            </span>
+          )}
+        </div>
         <div className="profile-info">
           <h2>{user.displayName}</h2>
           <p>{user.email}</p>
@@ -248,8 +184,8 @@ const UserProfile = () => {
         <div className="items-header">
           <h2>My Items</h2>
           <button 
-            className="profile-button success"
-            onClick={() => setUploadMode(true)}
+            className="profile-button success upload-item-button"
+            onClick={() => setUploadDialogOpen(true)}
           >
             Upload New Item
           </button>
@@ -257,195 +193,67 @@ const UserProfile = () => {
 
         {error && <div className="error-message">{error}</div>}
 
-        {uploadMode ? (
-          <div className="upload-form">
-            <button 
-              className="back-button" 
-              onClick={() => {
-                setUploadMode(false);
-                setImage(null);
-                setPreviewUrl('');
-              }}
-              aria-label="Go back"
-            >
-              ←
-            </button>
-            <h3>Upload New Item</h3>
-            <form onSubmit={handleItemUpload}>
-              <div className="form-group">
-                <label>Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  required
-                >
-                  <option value="barter">Barter</option>
-                  <option value="giveaway">Giveaway</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  required
-                >
-                  <option value="">Select Category</option>
-                  <option value="gaming-console">Gaming Console</option>
-                  <option value="sports-equipment">Sports Equipment</option>
-                  <option value="electronics">Electronics</option>
-                  <option value="books">Books</option>
-                  <option value="clothing">Clothing</option>
-                  <option value="furniture">Furniture</option>
-                  <option value="musical-instruments">Musical Instruments</option>
-                  <option value="tools">Tools</option>
-                  <option value="art-supplies">Art Supplies</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Estimated Value Range</label>
-                <select
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
-                  required
-                >
-                  <option value="">Select Value Range</option>
-                  <option value="0-50">$0 - $50</option>
-                  <option value="51-100">$51 - $100</option>
-                  <option value="101-250">$101 - $250</option>
-                  <option value="251-500">$251 - $500</option>
-                  <option value="501-1000">$501 - $1000</option>
-                  <option value="1000+">$1000+</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Condition</label>
-                <select
-                  value={condition}
-                  onChange={(e) => setCondition(e.target.value)}
-                  required
-                >
-                  <option value="">Select Condition</option>
-                  <option value="New">New</option>
-                  <option value="Like New">Like New</option>
-                  <option value="Good">Good</option>
-                  <option value="Fair">Fair</option>
-                  <option value="Poor">Poor</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Images</label>
-                <ImageUploader
-                  onUploadComplete={handleImageUploadComplete}
-                  maxFiles={10}
-                  userId={user._id}
-                />
-              </div>
-              <div className="form-actions">
-                <button type="submit" disabled={loading}>
-                  {loading ? 'Uploading...' : 'Upload Item'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setUploadMode(false);
-                    setImage(null);
-                    setPreviewUrl('');
-                  }}
-                  className="cancel-button"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : !items.length ? (
+        {!items.length ? (
           <div className="no-items">
             <p>You haven't posted any items yet.</p>
-            <button 
-              className="profile-button success upload-item-button"
-              onClick={() => setUploadMode(true)}
-            >
-              Upload Your First Item
-            </button>
           </div>
         ) : (
-          <div className="items-grid">
+          <div className="user-items-grid">
             {items.map((item) => (
-              <div key={item._id} className="item-card">
-                <div className="item-image-container">
-                  <ImageCarousel 
-                    images={Array.isArray(item.imageUrls) ? item.imageUrls : [getImageUrl(item.imageUrl)]} 
+              <div
+                key={item._id}
+                className="item-card tomato-style"
+                style={{ cursor: 'pointer', position: 'relative' }}
+                onClick={() => {
+                  setEditItem(item);
+                  setEditDialogOpen(true);
+                }}
+              >
+                <div className="item-image-container tomato-style" style={{ position: 'relative' }}>
+                  <ImageCarousel
+                    images={Array.isArray(item.imageUrls) ? item.imageUrls : [getImageUrl(item.imageUrl)]}
                   />
-                  <div className="tags-container">
-                    <div className="badge-wrapper">
-                      <div className="badge-label">TYPE</div>
-                      <div className={`badge-value ${!item.type ? 'not-available' : 'has-value'}`}>
-                        {item.type || 'N/A'}
-                      </div>
-                    </div>
-                    <div className="badge-wrapper">
-                      <div className="badge-label">CATEGORY</div>
-                      <div className={`badge-value ${!item.category ? 'not-available' : 'has-value'}`}>
-                        {item.category || 'N/A'}
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    className="delete-item-btn"
+                    title="Delete item"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setItemToDelete(item);
+                      setShowDeleteDialog(true);
+                    }}
+                  >✕</button>
                 </div>
-                <div className="item-info">
-                  <h3>{item.title}</h3>
-                  <p className="description">{item.description}</p>
-                  <p className="condition">{item.condition}</p>
-                  <p className="price-range">Est. Value: {formatPriceRange(item.priceRange)}</p>
-                  <div className="status-wrapper">
-                    <label htmlFor={`status-${item._id}`}>Status:</label>
-                    <select
-                      id={`status-${item._id}`}
-                      value={item.status}
-                      onChange={(e) => handleStatusChange(item._id, e.target.value)}
-                      disabled={updatingStatus === item._id}
-                      className={`status-select ${item.status}`}
-                    >
-                      {statusOptions.map(status => (
-                        <option key={status} value={status}>
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                    {updatingStatus === item._id && <span className="status-updating">Updating...</span>}
+                <div className="item-info tomato-style">
+                  <div className="item-title tomato-style">{item.title}</div>
+                  <div className="item-price tomato-style">{formatPriceRange(item.priceRange)}</div>
+                  <div className="item-description tomato-style">
+                    {item.description}
                   </div>
-                  <div className="item-actions">
-                    <button
-                      className="edit-button"
-                      onClick={() => navigate(`/item/${item._id}/edit`)}
-                    >
-                      Edit Item
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={() => handleDeleteClick(item)}
-                      disabled={deletingItemId === item._id}
-                    >
-                      {deletingItemId === item._id ? 'Deleting...' : 'Delete Item'}
-                    </button>
+                  <div className="item-tags tomato-style">
+                    <span className={`tag tag-type ${item.type}`}>
+                      {item.type === 'barter' ? '🔄' : item.type === 'giveaway' ? '🎁' : '❓'}{' '}
+                      {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'N/A'}
+                    </span>
+                    <span className={`tag tag-condition ${item.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
+                      {item.condition === 'New' ? '🆕' :
+                       item.condition === 'Like New' ? '✨' :
+                       item.condition === 'Good' ? '👍' :
+                       item.condition === 'Fair' ? '👌' :
+                       item.condition === 'Poor' ? '⚠️' : '❓'}{' '}
+                      {item.condition || 'N/A'}
+                    </span>
+                    <span className={`tag tag-category ${item.category}`}>
+                      {item.category === 'furniture' ? '🛋️' :
+                       item.category === 'electronics' ? '💻' :
+                       item.category === 'books' ? '📚' :
+                       item.category === 'clothing' ? '👕' :
+                       item.category === 'sports-equipment' ? '🏀' :
+                       item.category === 'musical-instruments' ? '🎸' :
+                       item.category === 'tools' ? '🛠️' :
+                       item.category === 'art-supplies' ? '🎨' :
+                       item.category === 'other' ? '❔' : '❓'}{' '}
+                      {item.category || 'N/A'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -453,6 +261,15 @@ const UserProfile = () => {
           </div>
         )}
       </div>
+
+      {/* Floating Action Button for Upload (mobile only) */}
+      <button
+        className="fab-upload-btn"
+        title="Upload New Item"
+        onClick={() => setUploadDialogOpen(true)}
+      >
+        +
+      </button>
 
       {showDeleteDialog && (
         <div className="dialog-overlay" onClick={handleDeleteCancel}>
@@ -477,6 +294,28 @@ const UserProfile = () => {
           </div>
         </div>
       )}
+
+      <EditItemDialog
+        open={editDialogOpen}
+        item={editItem || {}}
+        onClose={() => setEditDialogOpen(false)}
+        onSave={async (updatedItem) => {
+          try {
+            const response = await axios.put(`/items/${updatedItem._id}`, updatedItem, { withCredentials: true });
+            if (response.data) {
+              setItems((prev) => prev.map((it) => (it._id === updatedItem._id ? response.data : it)));
+              setEditDialogOpen(false);
+              setEditItem(null);
+            }
+          } catch (err) {
+            setError(err.response?.data?.message || 'Failed to update item');
+          }
+        }}
+      />
+
+      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
+        <ItemUpload onSuccess={() => setUploadDialogOpen(false)} />
+      </Dialog>
     </div>
   );
 };

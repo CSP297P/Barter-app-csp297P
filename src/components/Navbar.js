@@ -56,7 +56,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <Link to="/">Barter App</Link>
+        <Link to="/">Barter!</Link>
       </div>
       <div className="navbar-links">
         <Link to="/marketplace">Marketplace</Link>
@@ -77,6 +77,21 @@ const Navbar = () => {
             <Link to="/signup">Sign Up</Link>
           </>
         )}
+        <button
+          style={{
+            marginLeft: 16,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 24,
+            color: 'var(--color-primary)',
+            alignSelf: 'center'
+          }}
+          title="Toggle light/dark mode"
+          onClick={() => document.body.classList.toggle('dark')}
+        >
+          <span role="img" aria-label="theme">🌗</span>
+        </button>
       </div>
     </nav>
   );
