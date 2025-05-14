@@ -158,8 +158,6 @@ const Messages = () => {
     }
   };
 
-  // Helper to determine if current user is the requester (User A)
-  const isRequester = selectedConversation && selectedConversation.participants[0]._id === user._id;
   // Helper to determine if current user is the recipient (User B)
   const isRecipient = selectedConversation && selectedConversation.participants[1]._id === user._id;
   const isPending = selectedConversation && selectedConversation.status === 'pending';
@@ -229,7 +227,7 @@ const Messages = () => {
                 >
                   <div className="conversation-avatar" aria-label={`Avatar for ${otherUser?.displayName || 'User'}`}>{avatarLetter}</div>
                   <div className="conversation-info">
-                    <h3>{conv.item.title}</h3>
+                    <h3>{conv.item ? conv.item.title : 'Untitled Item'}</h3>
                     <p>with {otherUser?.displayName || 'User'}</p>
                     {conv.status === 'pending' && (
                       <span className="pending-badge">Pending</span>
@@ -273,10 +271,14 @@ const Messages = () => {
             <div className="messages-container modern-messages-container">
               {isPending ? (
                 isRecipient ? (
-                  <div className="pending-actions">
-                    <p>This user wants to trade for your item. Accept or reject the request to start chatting.</p>
-                    <button className="accept-button" onClick={handleAcceptTrade}>Accept</button>
-                    <button className="deny-button" onClick={handleDenyTrade}>Reject</button>
+                  <div className="chat-request-container">
+                    <div className="chat-request-message">
+                      This user wants to trade for your item. Accept or reject the request to start chatting.
+                    </div>
+                    <div className="chat-request-actions">
+                      <button className="chat-request-btn accept" onClick={handleAcceptTrade}>Accept</button>
+                      <button className="chat-request-btn reject" onClick={handleDenyTrade}>Reject</button>
+                    </div>
                   </div>
                 ) : (
                   <div className="pending-info">

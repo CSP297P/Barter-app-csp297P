@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { getUserItems } from '../../services/mongodb';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import ImageUploader from '../../components/ImageUploader';
 import ImageCarousel from '../../components/ImageCarousel';
 import EditItemDialog from '../../components/EditItemDialog';
 import ItemUpload from '../../pages/Items/ItemUpload';
@@ -12,21 +10,15 @@ import './UserProfile.css';
 
 const UserProfile = () => {
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingItemId, setDeletingItemId] = useState(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(null);
-  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-
-  const statusOptions = ['available', 'pending', 'traded'];
 
   useEffect(() => {
     const fetchUserItems = async () => {
@@ -45,11 +37,6 @@ const UserProfile = () => {
 
     fetchUserItems();
   }, [user]);
-
-  const handleDeleteClick = (item) => {
-    setItemToDelete(item);
-    setShowDeleteDialog(true);
-  };
 
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
@@ -115,33 +102,6 @@ const UserProfile = () => {
       return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrls}`;
     }
     return '';
-  };
-
-  const handleStatusChange = async (itemId, newStatus) => {
-    setUpdatingStatus(itemId);
-    try {
-      const response = await axios.put(`/items/${itemId}`, 
-        { status: newStatus },
-        { withCredentials: true }
-      );
-      
-      if (response.data) {
-        setItems(prevItems => 
-          prevItems.map(item => 
-            item._id === itemId ? response.data : item
-          )
-        );
-        setError('');
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to update item status';
-      setError(errorMessage);
-      
-      setItems(prevItems => [...prevItems]);
-    } finally {
-      setUpdatingStatus(null);
-    }
   };
 
   const formatPriceRange = (range) => {
