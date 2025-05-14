@@ -3,8 +3,8 @@
   width: 100%;
   max-width: 100%;
   aspect-ratio: 4/3;
-  overflow: hidden;
-  border-radius: 8px;
+  overflow: visible;
+  border-radius: 20px;
 }
 
 .carousel-main {
@@ -34,31 +34,36 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
+  background: rgba(30, 41, 59, 0.82);
+  color: #fff;
+  border: 3px solid #fff;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 24px;
+  width: 52px;
+  height: 52px;
+  font-size: 2.2rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 2;
-  transition: background-color 0.3s;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(30,41,59,0.18), 0 1.5px 6px rgba(66,133,244,0.10);
+  transition: background 0.2s, border 0.2s, transform 0.15s;
+  outline: none;
 }
 
-.carousel-button:hover {
-  background: rgba(0, 0, 0, 0.7);
+.carousel-button:hover, .carousel-button:focus {
+  background: linear-gradient(90deg, #4285f4 60%, #34a853 100%);
+  color: #fff;
+  border-color: #4285f4;
+  transform: translateY(-50%) scale(1.08);
 }
 
 .carousel-button.prev {
-  left: 10px;
+  left: 28px;
 }
 
 .carousel-button.next {
-  right: 10px;
+  right: 28px;
 }
 
 .carousel-indicators {

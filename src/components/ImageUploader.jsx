@@ -264,25 +264,95 @@ const ImageUploader = ({ onUploadComplete, maxFiles = 5, initialImages = [] }) =
           )}
 
           {previews.length > 0 && (
-            <div className="preview-container">
-              {previews.map((preview, index) => (
-                <div key={`${preview.file}-${index}`} className="preview-item">
-                  <img src={preview.url} alt={preview.file} />
-                  <div className="preview-actions">
+            <div className="preview-container" style={{ display: 'flex', gap: 12, marginTop: 12, overflowX: 'auto' }}>
+              {previews.map((preview, idx) => (
+                <div key={`${preview.file}-${idx}`} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 90, marginBottom: 8 }}>
+                  <img src={preview.url} alt={preview.file} style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 8, border: '2px solid #eee', marginBottom: 4, boxShadow: '0 1px 4px rgba(60,60,60,0.07)' }} />
+                  <button
+                    type="button"
+                    title="Remove image"
+                    onClick={() => removeFile(preview.file)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: '#ffebee',
+                      color: '#c62828',
+                      fontSize: 15,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 4px rgba(60,60,60,0.10)',
+                      opacity: 0.85,
+                      transition: 'opacity 0.2s',
+                      zIndex: 2,
+                    }}
+                    onMouseOver={e => e.currentTarget.style.opacity = 1}
+                    onMouseOut={e => e.currentTarget.style.opacity = 0.85}
+                    aria-label="Remove image"
+                  >✕</button>
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: 4, marginTop: 2 }}>
                     <button
-                      onClick={() => editImage(index)}
-                      disabled={uploading}
-                      className="edit-button"
-                    >
-                      Edit
-                    </button>
+                      type="button"
+                      title="Move left"
+                      onClick={() => {
+                        if (idx === 0) return;
+                        const newPreviews = [...previews];
+                        [newPreviews[idx - 1], newPreviews[idx]] = [newPreviews[idx], newPreviews[idx - 1]];
+                        setPreviews(newPreviews);
+                        // Also update files order if needed
+                      }}
+                      disabled={idx === 0}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: idx === 0 ? '#f0f0f0' : '#e3f2fd',
+                        color: idx === 0 ? '#bdbdbd' : '#1976d2',
+                        fontSize: 15,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                        transition: 'background 0.2s',
+                        marginRight: 2
+                      }}
+                      aria-label="Move left"
+                    >&larr;</button>
                     <button
-                      onClick={() => removeFile(preview.file)}
-                      disabled={uploading}
-                      className="remove-button"
-                    >
-                      Remove
-                    </button>
+                      type="button"
+                      title="Move right"
+                      onClick={() => {
+                        if (idx === previews.length - 1) return;
+                        const newPreviews = [...previews];
+                        [newPreviews[idx + 1], newPreviews[idx]] = [newPreviews[idx], newPreviews[idx + 1]];
+                        setPreviews(newPreviews);
+                        // Also update files order if needed
+                      }}
+                      disabled={idx === previews.length - 1}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: idx === previews.length - 1 ? '#f0f0f0' : '#e3f2fd',
+                        color: idx === previews.length - 1 ? '#bdbdbd' : '#1976d2',
+                        fontSize: 15,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: idx === previews.length - 1 ? 'not-allowed' : 'pointer',
+                        transition: 'background 0.2s',
+                        marginRight: 2
+                      }}
+                      aria-label="Move right"
+                    >&rarr;</button>
                   </div>
                 </div>
               ))}

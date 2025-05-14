@@ -38,14 +38,16 @@ const ImageCarousel = ({ images }) => {
   return (
     <div className="carousel-container" onClick={handleCarouselClick}>
       <div className="carousel-main" onClick={handleCarouselClick}>
-        <button 
-          className="carousel-button prev" 
-          onClick={goToPrevious}
-          onMouseDown={(e) => e.stopPropagation()}
-          aria-label="Previous image"
-        >
-          ‹
-        </button>
+        {images.length > 1 && (
+          <button 
+            className="carousel-button prev" 
+            onClick={goToPrevious}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Previous image"
+          >
+            ‹
+          </button>
+        )}
         <div className="carousel-image-container" onClick={handleCarouselClick}>
           <img 
             src={images[currentIndex]} 
@@ -54,14 +56,16 @@ const ImageCarousel = ({ images }) => {
             onClick={handleCarouselClick}
           />
         </div>
-        <button 
-          className="carousel-button next" 
-          onClick={goToNext}
-          onMouseDown={(e) => e.stopPropagation()}
-          aria-label="Next image"
-        >
-          ›
-        </button>
+        {images.length > 1 && (
+          <button 
+            className="carousel-button next" 
+            onClick={goToNext}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Next image"
+          >
+            ›
+          </button>
+        )}
       </div>
       {images.length > 1 && (
         <div className="carousel-indicators" onClick={handleCarouselClick}>

@@ -4,6 +4,9 @@ import axios from 'axios';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
 import config from '../../config';
+import { Dialog, DialogContent, IconButton } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
+import ItemUpload from '../Items/ItemUpload';
 import './Messages.css';
 
 const Messages = () => {
@@ -20,6 +23,7 @@ const Messages = () => {
   const [error, setError] = useState(null);
   const [unreadCounts, setUnreadCounts] = useState({});
   const messagesEndRef = useRef(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -203,74 +207,85 @@ const Messages = () => {
   }
 
   return (
-    <div className="messages-page">
+    <div className="messages-page modern-messages-layout">
       {/* Conversations Panel */}
-      <div className="conversations-panel">
+      <div className="conversations-panel modern-conversations-panel">
         <h2>Conversations</h2>
         <div className="conversations-list">
-          {conversations.map(conv => (
-            <div
-              key={conv._id}
-              className={`conversation-item ${selectedConversation?._id === conv._id ? 'selected' : ''}`}
-            >
-              <div 
-                className="conversation-preview"
-                onClick={() => setSelectedConversation(conv)}
+          {conversations.length === 0 ? (
+            <div className="no-conversations">No conversations found.</div>
+          ) : conversations.map(conv => {
+            const otherUser = conv.participants.find(p => p._id !== user._id);
+            // Avatar: use first letter of displayName or fallback
+            const avatarLetter = (otherUser?.displayName?.[0] || '?').toUpperCase();
+            return (
+              <div
+                key={conv._id}
+                className={`conversation-item modern-conversation-item ${selectedConversation?._id === conv._id ? 'selected' : ''}`}
               >
-                <h3>{conv.item.title}</h3>
-                <p>with {conv.participants.find(p => p._id !== user._id)?.displayName}</p>
-                {conv.status === 'pending' && (
-                  <span className="pending-badge">Pending</span>
-                )}
-                {conv.status === 'denied' && (
-                  <span className="denied-badge">Denied</span>
-                )}
-              </div>
-              <div className="conversation-actions">
-                {unreadCounts[conv._id] > 0 && (
-                  <div className="unread-badge">{unreadCounts[conv._id]}</div>
-                )}
-                <button
-                  className="delete-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteConversation(conv._id);
-                  }}
-                  title="Delete conversation"
+                <div 
+                  className="conversation-preview"
+                  onClick={() => setSelectedConversation(conv)}
                 >
-                  ×
-                </button>
+                  <div className="conversation-avatar" aria-label={`Avatar for ${otherUser?.displayName || 'User'}`}>{avatarLetter}</div>
+                  <div className="conversation-info">
+                    <h3>{conv.item.title}</h3>
+                    <p>with {otherUser?.displayName || 'User'}</p>
+                    {conv.status === 'pending' && (
+                      <span className="pending-badge">Pending</span>
+                    )}
+                    {conv.status === 'denied' && (
+                      <span className="denied-badge">Rejected</span>
+                    )}
+                  </div>
+                </div>
+                <div className="conversation-actions">
+                  {unreadCounts[conv._id] > 0 && (
+                    <div className="unread-badge">{unreadCounts[conv._id]}</div>
+                  )}
+                  <button
+                    className="delete-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conv._id);
+                    }}
+                    title="Delete conversation"
+                    aria-label="Delete conversation"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* Messages Panel */}
-      <div className="messages-panel">
+      <div className="messages-panel modern-messages-panel">
         {selectedConversation ? (
           <>
-            <div className="messages-header">
+            <div className="messages-header modern-messages-header">
               {selectedConversation
                 ? `Chat with ${selectedConversation.participants.find(p => p._id !== user._id)?.displayName || 'User'}`
                 : 'Chat'}
             </div>
-            <div className="messages-container">
+            <div className="messages-container modern-messages-container">
               {isPending ? (
                 isRecipient ? (
                   <div className="pending-actions">
-                    <p>This user wants to trade for your item. Accept or deny the request to start chatting.</p>
+                    <p>This user wants to trade for your item. Accept or reject the request to start chatting.</p>
                     <button className="accept-button" onClick={handleAcceptTrade}>Accept</button>
-                    <button className="deny-button" onClick={handleDenyTrade}>Deny</button>
+                    <button className="deny-button" onClick={handleDenyTrade}>Reject</button>
                   </div>
                 ) : (
                   <div className="pending-info">
-                    <p>Waiting for the other user to accept or deny your trade request.</p>
+                    <p>Waiting for the other user to accept or reject your trade request.</p>
                   </div>
                 )
               ) : isDenied ? (
                 <div className="denied-info">
-                  <p>This trade request was denied.</p>
+                  <p>This trade request was rejected.</p>
                 </div>
               ) : isActive ? (
                 messages.length === 0 ? (
@@ -294,36 +309,21 @@ const Messages = () => {
                           formattedDate = String(msg.timestamp); // fallback to raw value
                         }
                       }
+                      // Avatar for chat bubbles
+                      const sender = selectedConversation.participants.find(p => p._id === msg.senderId);
+                      const senderAvatar = (sender?.displayName?.[0] || '?').toUpperCase();
                       return (
                         <div
                           key={msg._id}
-                          className={`message ${isSent ? 'sent' : 'received'}`}
-                          style={{
-                            backgroundColor: isSent ? '#4285f4' : '#f1f1f1',
-                            color: isSent ? 'white' : '#333',
-                            alignSelf: isSent ? 'flex-end' : 'flex-start',
-                            marginLeft: isSent ? 'auto' : '0',
-                            marginRight: isSent ? '0' : 'auto',
-                            borderRadius: '15px',
-                            borderBottomRightRadius: isSent ? '5px' : '15px',
-                            borderBottomLeftRadius: isSent ? '15px' : '5px',
-                            padding: '12px 16px',
-                            maxWidth: '70%',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                          }}
+                          className={`message-bubble modern-message-bubble ${isSent ? 'sent' : 'received'}`}
                         >
-                          <p style={{ margin: 0, wordWrap: 'break-word', fontSize: '14px', lineHeight: '1.4' }}>
-                            {msg.content}
-                          </p>
-                          <small style={{
-                            display: 'block',
-                            marginTop: '6px',
-                            fontSize: '11px',
-                            opacity: 0.8,
-                            color: isSent ? 'rgba(255, 255, 255, 0.9)' : '#666'
-                          }}>
-                            {formattedDate}
-                          </small>
+                          {!isSent && (
+                            <div className="bubble-avatar" aria-label={`Avatar for ${sender?.displayName || 'User'}`}>{senderAvatar}</div>
+                          )}
+                          <div className="bubble-content">
+                            <p className="message-content">{msg.content}</p>
+                            <small className="message-date">{formattedDate}</small>
+                          </div>
                         </div>
                       );
                     })}
@@ -332,27 +332,28 @@ const Messages = () => {
                 )
               ) : null}
             </div>
-            {isActive && (
-              <div className="message-input">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleSendMessage}
-                  disabled={sending || !newMessage.trim()}
-                >
-                  {sending ? 'Sending...' : 'Send'}
-                </button>
-              </div>
-            )}
+            <div className="message-input modern-message-input">
+              <textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type your message..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                aria-label="Type your message"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={sending || !newMessage.trim()}
+                className="send-message-button"
+                aria-label="Send message"
+              >
+                {sending ? 'Sending...' : 'Send'}
+              </button>
+            </div>
           </>
         ) : (
           <div className="no-conversation-selected">
@@ -362,47 +363,41 @@ const Messages = () => {
       </div>
 
       {/* Item Details Panel */}
-      <div className="item-details-panel">
+      <div className="item-details-panel modern-item-details-panel">
         {selectedConversation ? (
           <>
             <h2>Trade Details</h2>
             <div className="item-info">
               <h3>Requested Item</h3>
-              <img
-                src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl}
-                alt={selectedConversation.item.title}
-              />
-              <h4>{selectedConversation.item.title}</h4>
-              <p>{selectedConversation.item.description}</p>
-              <div className="item-meta">
-                <p>Condition: {selectedConversation.item.condition}</p>
-                <p>Status: {selectedConversation.item.status}</p>
-              </div>
-              <button
-                className="view-item-button"
-                onClick={() => navigate(`/item/${selectedConversation.item._id}`)}
-              >
-                View Item
-              </button>
+              {selectedConversation.item && (
+                <div className="trade-item-card">
+                  <img
+                    src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl}
+                    alt={selectedConversation.item.title}
+                    style={{ width: '100%', maxWidth: 180, maxHeight: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }}
+                  />
+                  <button
+                    className="view-item-button"
+                    onClick={() => navigate(`/item/${selectedConversation.item._id}`)}
+                  >
+                    View Item
+                  </button>
+                </div>
+              )}
             </div>
             {selectedConversation.offeredItems && selectedConversation.offeredItems.length > 0 && (
               <div className="item-info">
                 <h3>Offered Item(s)</h3>
-                {selectedConversation.offeredItems.map(offered => (
-                  <div key={offered._id} className="offered-item-details">
+                {selectedConversation.offeredItems.map((item, idx) => (
+                  <div className="trade-item-card" key={item._id || idx}>
                     <img
-                      src={offered.imageUrls?.[0] || offered.imageUrl}
-                      alt={offered.title}
+                      src={item.imageUrls?.[0] || item.imageUrl}
+                      alt={item.title}
+                      style={{ width: '100%', maxWidth: 180, maxHeight: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }}
                     />
-                    <h4>{offered.title}</h4>
-                    <p>{offered.description}</p>
-                    <div className="item-meta">
-                      <p>Condition: {offered.condition}</p>
-                      <p>Status: {offered.status}</p>
-                    </div>
                     <button
                       className="view-item-button"
-                      onClick={() => navigate(`/item/${offered._id}`)}
+                      onClick={() => navigate(`/item/${item._id}`)}
                     >
                       View Item
                     </button>
@@ -417,6 +412,37 @@ const Messages = () => {
           </div>
         )}
       </div>
+
+      <Dialog 
+        open={uploadDialogOpen} 
+        onClose={() => setUploadDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: '12px',
+            padding: '0',
+            maxHeight: '90vh',
+            position: 'relative'
+          }
+        }}
+      >
+        <IconButton
+          onClick={() => setUploadDialogOpen(false)}
+          style={{
+            position: 'absolute',
+            right: 8,
+            top: 8,
+            zIndex: 1,
+            color: '#666'
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+        <DialogContent style={{ padding: 0 }}>
+          <ItemUpload onSuccess={() => setUploadDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
