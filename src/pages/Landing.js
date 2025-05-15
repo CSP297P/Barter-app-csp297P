@@ -8,6 +8,7 @@ import {
   Grid,
   Paper,
   IconButton,
+  useTheme,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -73,23 +74,23 @@ const steps = [
   {
     title: "Browse & Filter",
     description: "Easily find what you need with powerful search and filter options. Browse by categories, condition, or type to discover the perfect items for trade.",
-    icon: <SearchIcon sx={{ fontSize: 48, color: '#1976d2' }} />,
-    color: "#bbdefb",
-    bgColor: "#e3f2fd"
+    icon: <SearchIcon sx={{ fontSize: 48 }} />,
+    color: "primary.main",
+    bgColor: "primary.light"
   },
   {
     title: "Connect & Chat",
     description: "Found something you like? Connect with fellow UCI students directly through our platform and discuss trade possibilities in real-time.",
-    icon: <ChatIcon sx={{ fontSize: 48, color: '#2e7d32' }} />,
-    color: "#c8e6c9",
-    bgColor: "#e8f5e9"
+    icon: <ChatIcon sx={{ fontSize: 48 }} />,
+    color: "success.main",
+    bgColor: "success.light"
   },
   {
     title: "Trade Safely",
     description: "Meet at designated safe spots on campus to complete your trades. Our verified UCI-only community ensures secure and trustworthy exchanges.",
-    icon: <SecurityIcon sx={{ fontSize: 48, color: '#f57c00' }} />,
-    color: "#ffecb3",
-    bgColor: "#fff8e1"
+    icon: <SecurityIcon sx={{ fontSize: 48 }} />,
+    color: "warning.main",
+    bgColor: "warning.light"
   }
 ];
 
@@ -98,6 +99,8 @@ const Landing = () => {
   const { user } = useContext(AuthContext);
   const [animateStats, setAnimateStats] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   const nextStep = useCallback(() => {
     setCurrentStep((prev) => (prev + 1) % steps.length);
@@ -128,7 +131,16 @@ const Landing = () => {
   }, [animateStats]);
 
   return (
-    <Box className="landing-container">
+    <Box 
+      className="landing-container"
+      sx={{
+        bgcolor: 'background.default',
+        color: 'text.primary',
+        minHeight: '100vh',
+        width: '100%',
+        overflowX: 'hidden'
+      }}
+    >
       <section className="hero-section">
         <div className="hero-background"></div>
         <Container maxWidth="lg" className="section-content">
@@ -263,7 +275,8 @@ const Landing = () => {
               sx={{ 
                 fontWeight: 600,
                 fontSize: { xs: '2rem', md: '2.5rem' },
-                mb: 1
+                mb: 1,
+                color: 'text.primary'
               }}
             >
               How It Works
@@ -296,8 +309,9 @@ const Landing = () => {
                     opacity: index === currentStep ? 1 : 0,
                     transform: `translateX(${(index - currentStep) * 100}%)`,
                     transition: 'transform 0.5s ease, opacity 0.5s ease',
-                    bgcolor: step.bgColor,
-                    textAlign: 'center'
+                    textAlign: 'center',
+                    bgcolor: 'background.paper',
+                    color: 'text.primary'
                   }}
                 >
                   <Grid container spacing={2} alignItems="center" direction="column">
@@ -322,13 +336,13 @@ const Landing = () => {
                             right: -4,
                             bottom: -4,
                             borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${step.color}, ${step.bgColor})`,
+                            background: `linear-gradient(135deg, ${theme.palette[step.color]}, ${theme.palette[step.bgColor]})`,
                             zIndex: -1,
                             opacity: 0.5,
                           }
                         }}
                       >
-                        {step.icon}
+                        {React.cloneElement(step.icon, { sx: { color: step.color } })}
                       </Box>
                     </Grid>
                     <Grid item xs={12} sx={{ maxWidth: 600, mx: 'auto', px: { xs: 2, md: 4 } }}>
@@ -346,9 +360,9 @@ const Landing = () => {
                       </Typography>
                       <Typography 
                         variant="body1"
+                        color="text.secondary"
                         sx={{ 
                           fontSize: { xs: '1rem', md: '1.125rem' },
-                          color: 'text.secondary',
                           lineHeight: 1.6
                         }}
                       >
@@ -368,6 +382,11 @@ const Landing = () => {
                 left: { xs: 8, md: 16 },
                 top: '50%',
                 transform: 'translateY(-50%)',
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
               }}
             >
               <ArrowBack />
@@ -381,6 +400,11 @@ const Landing = () => {
                 right: { xs: 8, md: 16 },
                 top: '50%',
                 transform: 'translateY(-50%)',
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: 'action.hover'
+                }
               }}
             >
               <ArrowForward />
@@ -396,7 +420,7 @@ const Landing = () => {
                     height: 10,
                     mx: 0.75,
                     borderRadius: '50%',
-                    bgcolor: index === currentStep ? 'primary.main' : 'grey.300',
+                    bgcolor: index === currentStep ? 'primary.main' : 'action.disabled',
                     cursor: 'pointer',
                     transition: 'background-color 0.3s ease',
                   }}
@@ -450,7 +474,7 @@ const Landing = () => {
                 className="cta-button"
                 sx={{
                   bgcolor: 'white',
-                  color: '#1a237e',
+                  color: 'primary.dark',
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                   py: 1.5,
                   px: 4,

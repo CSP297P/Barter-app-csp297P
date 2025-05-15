@@ -4,13 +4,18 @@ import { AuthContext } from '../contexts/AuthContext';
 import { useSocket } from '../hooks/useSocket';
 import axios from 'axios';
 import config from '../config';
+import { useTheme } from '@mui/material';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 import './Navbar.css';
 
-const Navbar = () => {
+const Navbar = ({ onThemeToggle }) => {
   const { user, signOut } = useContext(AuthContext);
   const { onMessage } = useSocket();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
   useEffect(() => {
     const fetchUnreadCount = async () => {
@@ -84,13 +89,22 @@ const Navbar = () => {
             border: 'none',
             cursor: 'pointer',
             fontSize: 24,
-            color: 'var(--color-primary)',
-            alignSelf: 'center'
+            color: theme.palette.text.primary,
+            alignSelf: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 8,
+            borderRadius: '50%',
+            transition: 'background-color 0.3s',
+            '&:hover': {
+              backgroundColor: theme.palette.action.hover,
+            }
           }}
           title="Toggle light/dark mode"
-          onClick={() => document.body.classList.toggle('dark')}
+          onClick={onThemeToggle}
         >
-          <span role="img" aria-label="theme">🌗</span>
+          {isDarkMode ? <Brightness7Icon /> : <Brightness4Icon />}
         </button>
       </div>
     </nav>
