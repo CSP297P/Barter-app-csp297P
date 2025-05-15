@@ -7,6 +7,7 @@ import config from '../../config';
 import { Dialog, DialogContent, IconButton } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import ItemUpload from '../Items/ItemUpload';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import './Messages.css';
 
 const Messages = () => {
@@ -24,6 +25,7 @@ const Messages = () => {
   const [unreadCounts, setUnreadCounts] = useState({});
   const messagesEndRef = useRef(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, sessionId: null });
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -61,23 +63,42 @@ const Messages = () => {
     fetchConversations();
   }, []);
 
+  // Restore selected conversation from localStorage after conversations are loaded
+  useEffect(() => {
+    if (conversations.length > 0) {
+      const storedId = localStorage.getItem('selectedConversationId');
+      if (storedId) {
+        const found = conversations.find(conv => conv._id === storedId);
+        if (found) setSelectedConversation(found);
+      }
+    }
+  }, [conversations]);
+
+  // When a conversation is selected, persist its ID
+  const handleSelectConversation = (conv) => {
+    setSelectedConversation(conv);
+    localStorage.setItem('selectedConversationId', conv._id);
+  };
+
   // Handle incoming messages
   const handleNewMessage = useCallback((message) => {
-    setMessages(prevMessages => {
-      if (prevMessages.some(msg => msg._id === message._id)) {
-        return prevMessages;
-      }
-      return [...prevMessages, message];
-    });
-
+    if (selectedConversation && String(message.sessionId) === String(selectedConversation._id)) {
+      setMessages(prevMessages => {
+        if (prevMessages.some(msg => String(msg._id) === String(message._id))) {
+          return prevMessages;
+        }
+        const updated = [...prevMessages, message];
+        return updated;
+      });
+    }
     // Update unread count if message is from other user
-    if (message.sender !== user._id) {
+    if (String(message.senderId || message.sender) !== String(user._id)) {
       setUnreadCounts(prev => ({
         ...prev,
         [message.sessionId]: (prev[message.sessionId] || 0) + 1
       }));
     }
-  }, [user._id]);
+  }, [user._id, selectedConversation]);
 
   // Set up message listener
   useEffect(() => {
@@ -87,17 +108,24 @@ const Messages = () => {
 
   // Join selected conversation
   useEffect(() => {
-    if (selectedConversation && isConnected) {
-      joinTradeSession(selectedConversation._id);
-      // Reset unread count when selecting conversation
-      setUnreadCounts(prev => ({
-        ...prev,
-        [selectedConversation._id]: 0
-      }));
-    }
+    const joinRoom = async () => {
+      if (selectedConversation && isConnected) {
+        try {
+          await joinTradeSession(selectedConversation._id);
+          // Reset unread count when selecting conversation
+          setUnreadCounts(prev => ({
+            ...prev,
+            [selectedConversation._id]: 0
+          }));
+        } catch (err) {
+          console.error('Failed to join trade session room:', err);
+        }
+      }
+    };
+    joinRoom();
   }, [selectedConversation, isConnected, joinTradeSession]);
 
-  // Fetch messages for selected conversation
+  // Fetch and merge messages for selected conversation when it changes
   useEffect(() => {
     if (selectedConversation) {
       const fetchMessages = async () => {
@@ -107,14 +135,23 @@ const Messages = () => {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           });
-          setMessages(response.data);
-          // Scroll after a short delay to ensure the container is rendered
+          // Merge fetched messages with any already in state (from socket)
+          setMessages(prevMessages => {
+            const all = [...response.data];
+            prevMessages.forEach(msg => {
+              if (!all.some(fetched => String(fetched._id) === String(msg._id))) {
+                all.push(msg);
+              }
+            });
+            // Sort by timestamp if needed
+            all.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            return all;
+          });
           setTimeout(scrollToBottom, 100);
         } catch (err) {
           setError('Failed to load messages');
         }
       };
-
       fetchMessages();
     }
   }, [selectedConversation]);
@@ -133,22 +170,20 @@ const Messages = () => {
     }
   };
 
-  const handleDeleteConversation = async (sessionId) => {
-    if (!window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteConversation = (sessionId) => {
+    setConfirmDelete({ open: true, sessionId });
+  };
 
+  const handleConfirmDelete = async () => {
+    const sessionId = confirmDelete.sessionId;
+    setConfirmDelete({ open: false, sessionId: null });
     try {
       await axios.delete(`${config.API_BASE_URL}/trade-sessions/${sessionId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
-
-      // Remove the conversation from the list
       setConversations(prev => prev.filter(conv => conv._id !== sessionId));
-      
-      // If the deleted conversation was selected, clear the selection
       if (selectedConversation?._id === sessionId) {
         setSelectedConversation(null);
         setMessages([]);
@@ -156,6 +191,10 @@ const Messages = () => {
     } catch (err) {
       setError('Failed to delete conversation');
     }
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDelete({ open: false, sessionId: null });
   };
 
   // Helper to determine if current user is the recipient (User B)
@@ -215,7 +254,7 @@ const Messages = () => {
           ) : conversations.map(conv => {
             const otherUser = conv.participants.find(p => p._id !== user._id);
             // Avatar: use first letter of displayName or fallback
-            const avatarLetter = (otherUser?.displayName?.[0] || '?').toUpperCase();
+            const avatarLetter = (otherUser?.displayName || '?');
             return (
               <div
                 key={conv._id}
@@ -223,7 +262,7 @@ const Messages = () => {
               >
                 <div 
                   className="conversation-preview"
-                  onClick={() => setSelectedConversation(conv)}
+                  onClick={() => handleSelectConversation(conv)}
                 >
                   <div className="conversation-avatar" aria-label={`Avatar for ${otherUser?.displayName || 'User'}`}>{avatarLetter}</div>
                   <div className="conversation-info">
@@ -313,7 +352,7 @@ const Messages = () => {
                       }
                       // Avatar for chat bubbles
                       const sender = selectedConversation.participants.find(p => p._id === msg.senderId);
-                      const senderAvatar = (sender?.displayName?.[0] || '?').toUpperCase();
+                      const senderAvatar = (sender?.displayName || '?');
                       return (
                         <div
                           key={msg._id}
@@ -445,6 +484,14 @@ const Messages = () => {
           <ItemUpload onSuccess={() => setUploadDialogOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Delete Conversation"
+        message="Are you sure you want to delete this conversation? This action cannot be undone."
+        onCancel={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 };

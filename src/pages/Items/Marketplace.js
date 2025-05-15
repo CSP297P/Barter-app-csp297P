@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
 import axios from 'axios';
 import './Marketplace.css';
@@ -14,6 +14,7 @@ const Marketplace = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -215,7 +216,17 @@ const Marketplace = () => {
           ) : (
             <div className="user-items-grid">
               {filteredItems.map((item) => (
-                <Link to={`/item/${item._id}`} key={item._id} className="item-card tomato-style">
+                <Link
+                  to={`/item/${item._id}`}
+                  key={item._id}
+                  className="item-card tomato-style"
+                  onClick={e => {
+                    // Always navigate to item detail page
+                    e.preventDefault();
+                    navigate(`/item/${item._id}`);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="item-image-container tomato-style">
                     <ImageCarousel images={getImageUrls(item)} />
                     {item.status !== 'available' && (

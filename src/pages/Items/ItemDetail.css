@@ -3,11 +3,11 @@
   padding: 32px 16px 32px 16px;
   max-width: 1100px;
   margin: 32px auto;
-  background: rgba(255,255,255,0.7);
+  background: var(--background-main);
   border-radius: 32px;
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--border-color);
   transition: box-shadow 0.3s;
 }
 
@@ -15,11 +15,11 @@
   position: absolute;
   top: 24px;
   left: 24px;
-  background: rgba(255,255,255,0.8);
+  background: var(--background-secondary);
   border: none;
   font-size: 28px;
   cursor: pointer;
-  color: #4285f4;
+  color: var(--accent);
   border-radius: 50%;
   width: 44px;
   height: 44px;
@@ -27,7 +27,7 @@
   transition: background 0.2s, color 0.2s;
 }
 .back-button:hover {
-  background: #4285f4;
+  background: var(--accent);
   color: #fff;
 }
 
@@ -35,9 +35,9 @@
   display: flex;
   gap: 48px;
   margin-top: 48px;
-  background: rgba(255,255,255,0.85);
+  background: var(--background-secondary);
   border-radius: 24px;
-  box-shadow: 0 4px 24px 0 rgba(66,133,244,0.08);
+  box-shadow: 0 4px 24px 0 rgba(24,28,36,0.07);
   padding: 32px 24px;
   transition: box-shadow 0.3s;
 }
@@ -71,14 +71,14 @@
   right: 18px;
   padding: 7px 18px;
   border-radius: 20px;
-  background: linear-gradient(90deg, #4285f4 60%, #34a853 100%);
-  color: white;
+  background: linear-gradient(90deg, var(--background-secondary) 60%, var(--accent) 100%);
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(66,133,244,0.12);
   letter-spacing: 0.5px;
   text-transform: capitalize;
-  border: 2px solid #fff;
+  border: 2px solid var(--background-secondary);
   transition: background 0.3s;
 }
 
@@ -96,7 +96,7 @@
 .item-info h1 {
   margin: 0;
   font-size: 2.5rem;
-  color: #222;
+  color: var(--text-main);
   font-weight: 800;
   letter-spacing: 0.5px;
   text-shadow: 0 2px 8px rgba(66,133,244,0.04);
@@ -105,24 +105,24 @@
 .description {
   margin: 18px 0;
   line-height: 1.7;
-  color: #444;
+  color: var(--text-secondary);
   font-size: 1.15rem;
 }
 
 .item-meta {
   margin: 18px 0;
   padding: 18px;
-  background: rgba(66,133,244,0.07);
+  background: rgba(52, 168, 83, 0.07);
   border-radius: 12px;
   font-size: 1.08rem;
-  color: #333;
+  color: var(--text-secondary);
   box-shadow: 0 2px 8px rgba(66,133,244,0.04);
 }
 
 .condition, .status {
   margin: 0;
   font-weight: 600;
-  color: #4285f4;
+  color: var(--success);
   letter-spacing: 0.2px;
 }
 
@@ -132,14 +132,15 @@
   align-items: center;
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e3e8ee;
+  border-top: 1px solid var(--border-color);
   font-size: 1.08rem;
+  color: var(--text-secondary);
 }
 
 .chat-button {
   padding: 12px 28px;
-  background: linear-gradient(90deg, #4285f4 60%, #34a853 100%);
-  color: white;
+  background: linear-gradient(90deg, var(--accent) 60%, var(--success) 100%);
+  color: #fff;
   border: none;
   border-radius: 24px;
   font-size: 1.1rem;
@@ -160,7 +161,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(30, 41, 59, 0.35);
+  background: rgba(24, 28, 36, 0.85);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -173,7 +174,7 @@
 }
 
 .dialog-content, .modern-trade-dialog {
-  background: rgba(255,255,255,0.92);
+  background: var(--background-secondary);
   padding: 32px 24px;
   border-radius: 24px;
   width: 95%;
@@ -183,8 +184,9 @@
   flex-direction: column;
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid var(--background-main);
   animation: popIn 0.3s;
+  color: var(--text-main);
 }
 @keyframes popIn {
   from { transform: scale(0.95); opacity: 0; }
@@ -192,16 +194,17 @@
 }
 
 .item-card, .item-card.tomato-style {
-  background: rgba(255,255,255,0.85);
+  background: var(--card-bg);
   border-radius: 18px;
   box-shadow: 0 2px 12px rgba(66,133,244,0.10);
   padding: 18px 12px;
   margin: 12px;
   transition: box-shadow 0.2s, transform 0.2s;
-  border: 1.5px solid #e3e8ee;
+  border: 1.5px solid var(--background-main);
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  color: var(--text-secondary);
 }
 .item-card:hover, .item-card:focus, .item-card.tomato-style:hover, .item-card.tomato-style:focus {
   box-shadow: 0 6px 24px rgba(66,133,244,0.18);
@@ -214,6 +217,7 @@
 }
 
 .selected-indicator {
+  z-index: 1000;
   position: absolute;
   top: 10px;
   right: 10px;
@@ -287,11 +291,11 @@
 }
 
 .error-message {
-  color: #d32f2f;
+  color: #ffb3b3;
   text-align: center;
   padding: 20px;
   margin: 20px;
-  background: #ffebee;
+  background: #2d2323;
   border-radius: 4px;
 }
 
@@ -331,16 +335,17 @@
   font-weight: 600;
   font-size: 1.1rem;
   margin-bottom: 4px;
+  color: var(--text-main);
 }
 
 .item-card .item-price {
-  color: #388e3c;
+  color: var(--success);
   font-weight: 500;
   margin-bottom: 6px;
 }
 
 .item-card .item-description {
-  color: #444;
+  color: var(--text-secondary);
   font-size: 0.97rem;
   margin-bottom: 6px;
   min-height: 32px;
@@ -362,21 +367,22 @@
 .item-card .item-info h3 {
   margin: 0 0 0.5rem;
   font-size: 1rem;
-  color: #333;
+  color: var(--text-main);
 }
 
 .item-card .item-info p {
   margin: 0.3rem 0;
   font-size: 0.9rem;
-  color: #666;
+  color: #b0b8c1;
 }
 
 .no-items {
   text-align: center;
   padding: 2rem;
-  background: #f5f5f5;
+  background: var(--card-bg);
   border-radius: 8px;
   margin-bottom: 1.5rem;
+  color: var(--text-secondary);
 }
 
 .no-items p {
@@ -385,8 +391,8 @@
 
 .no-items button {
   padding: 0.8rem 1.5rem;
-  background: #4285f4;
-  color: white;
+  background: var(--accent);
+  color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;

@@ -1,7 +1,23 @@
 const Message = require('../models/Message');
 const TradeSession = require('../models/TradeSession');
+const jwt = require('jsonwebtoken');
 
 const initializeSocketService = (io) => {
+  // Socket authentication middleware
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
+    }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.userId;
+      next();
+    } catch (err) {
+      next(new Error('Authentication error: Invalid token'));
+    }
+  });
+
   io.on('connection', (socket) => {
     // Join trade session room
     socket.on('join_trade_session', async ({ sessionId }) => {

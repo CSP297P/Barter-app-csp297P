@@ -5,6 +5,8 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
 import ImageCarousel from '../../components/ImageCarousel';
 import './ItemDetail.css';
+import ItemUpload from './ItemUpload';
+import { Dialog } from '@mui/material';
 
 const formatPriceRange = (range) => {
   if (!range) return 'N/A';
@@ -36,6 +38,7 @@ const ItemDetail = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [loadingUserItems, setLoadingUserItems] = useState(false);
   const [initialTradeMessage, setInitialTradeMessage] = useState('');
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -203,6 +206,14 @@ const ItemDetail = () => {
     });
   };
 
+  // Helper to extract lower bound from priceRange string
+  const getLowerBound = (range) => {
+    if (!range) return 0;
+    if (range === '1000+') return 1000;
+    const [min] = range.split('-');
+    return parseInt(min.replace(/[^0-9]/g, ''), 10) || 0;
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -233,16 +244,41 @@ const ItemDetail = () => {
         
         <div className="item-info">
           <h1>{item.title}</h1>
+          <p className="item-price">Price Range: {formatPriceRange(item.priceRange)}</p>
+          <div className="item-tags tomato-style">
+            <span className={`tag tag-type ${item.type}`}>
+              {item.type === 'barter' ? '🔄' : item.type === 'giveaway' ? '🎁' : '❓'}{' '}
+              {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'N/A'}
+            </span>
+            <span className={`tag tag-condition ${item.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
+              {item.condition === 'New' ? '🆕' :
+               item.condition === 'Like New' ? '✨' :
+               item.condition === 'Good' ? '👍' :
+               item.condition === 'Fair' ? '👌' :
+               item.condition === 'Poor' ? '⚠️' : '❓'}{' '}
+              {item.condition || 'N/A'}
+            </span>
+            <span className={`tag tag-category ${item.category}`}>
+              {item.category === 'furniture' ? '🛋️' :
+               item.category === 'electronics' ? '💻' :
+               item.category === 'books' ? '📚' :
+               item.category === 'clothing' ? '👕' :
+               item.category === 'sports-equipment' ? '🏀' :
+               item.category === 'musical-instruments' ? '🎸' :
+               item.category === 'tools' ? '🛠️' :
+               item.category === 'art-supplies' ? '🎨' :
+               item.category === 'other' ? '❔' : '❓'}{' '}
+              {item.category || 'N/A'}
+            </span>
+          </div>
           <p className="description">{item.description}</p>
-          
           <div className="item-meta">
             <p className="condition">Condition: {item.condition}</p>
             <p className="status">Status: {item.status}</p>
           </div>
-          
           <div className="owner-info">
             <div>
-              <p>Posted by: {item.owner.username}</p>
+              <p>Posted by: {item.owner.displayName || item.owner.username || 'Unknown'}</p>
               <p>Posted on: {new Date(item.createdAt).toLocaleDateString()}</p>
             </div>
             
@@ -264,7 +300,11 @@ const ItemDetail = () => {
       {showTradeDialog && (
         <div className="dialog-overlay" onClick={() => setShowTradeDialog(false)}>
           <div className="dialog-content modern-trade-dialog" onClick={e => e.stopPropagation()}>
-            <button className="close-dialog-btn" onClick={() => setShowTradeDialog(false)} aria-label="Close">
+            <button className="close-dialog-btn" onClick={() => {
+              setShowTradeDialog(false);
+              setSelectedItems([]);
+              setInitialTradeMessage('');
+            }} aria-label="Close">
               &times;
             </button>
             <header className="trade-dialog-header">
@@ -282,71 +322,86 @@ const ItemDetail = () => {
             ) : userItems.length === 0 ? (
               <div className="no-items">
                 <p>You don't have any items available for trade.</p>
-                <button onClick={() => navigate('/item/upload')} className="upload-item-btn">
+                <button onClick={() => setShowUploadDialog(true)} className="upload-item-btn">
                   Upload an Item
                 </button>
               </div>
             ) : (
-              <div className="trade-items-row">
-                {userItems.map(userItem => (
-                  <div
-                    key={userItem._id}
-                    className={`item-card tomato-style${selectedItems.includes(userItem._id) ? ' selected' : ''}`}
-                    tabIndex={0}
-                    aria-checked={selectedItems.includes(userItem._id)}
-                    role="checkbox"
-                    onClick={() => handleItemSelect(userItem._id)}
-                    onKeyDown={e => {
-                      if (e.key === ' ' || e.key === 'Enter') {
-                        handleItemSelect(userItem._id);
-                      }
-                    }}
-                  >
-                    {/* Selection indicator */}
-                    {selectedItems.includes(userItem._id) && (
-                      <div className="selected-indicator">
-                        <span>✔</span>
-                      </div>
-                    )}
-                    <div className="item-image-container tomato-style">
-                      <ImageCarousel images={getImageUrls(userItem)} />
+              (() => {
+                const eligibleItems = userItems.filter(userItem => getLowerBound(userItem.priceRange) >= getLowerBound(item.priceRange));
+                if (eligibleItems.length === 0) {
+                  return (
+                    <div className="no-items">
+                      <p>You don't have any items with a high enough value to trade for this item.</p>
+                      <button onClick={() => setShowUploadDialog(true)} className="upload-item-btn">
+                        Upload an Item
+                      </button>
                     </div>
-                    <div className="item-info tomato-style">
-                      <div className="item-title tomato-style">{userItem.title}</div>
-                      <div className="item-price tomato-style">{formatPriceRange(userItem.priceRange)}</div>
-                      <div className="item-description tomato-style">
-                        {userItem.description}
+                  );
+                }
+                return (
+                  <div className="trade-items-row">
+                    {eligibleItems.map(userItem => (
+                      <div
+                        key={userItem._id}
+                        className={`item-card tomato-style${selectedItems.includes(userItem._id) ? ' selected' : ''}`}
+                        tabIndex={0}
+                        aria-checked={selectedItems.includes(userItem._id)}
+                        role="checkbox"
+                        onClick={() => handleItemSelect(userItem._id)}
+                        onKeyDown={e => {
+                          if (e.key === ' ' || e.key === 'Enter') {
+                            handleItemSelect(userItem._id);
+                          }
+                        }}
+                      >
+                        {/* Selection indicator */}
+                        {selectedItems.includes(userItem._id) && (
+                          <div className="selected-indicator">
+                            <span>✔</span>
+                          </div>
+                        )}
+                        <div className="item-image-container tomato-style">
+                          <ImageCarousel images={getImageUrls(userItem)} />
+                        </div>
+                        <div className="item-info tomato-style">
+                          <div className="item-title tomato-style">{userItem.title}</div>
+                          <div className="item-price tomato-style">{formatPriceRange(userItem.priceRange)}</div>
+                          {/* <div className="item-description tomato-style">
+                            {userItem.description}
+                          </div> */}
+                          {/* <div className="item-tags tomato-style">
+                            <span className={`tag tag-type ${userItem.type}`}>
+                              {userItem.type === 'barter' ? '🔄' : userItem.type === 'giveaway' ? '🎁' : '❓'}{' '}
+                              {userItem.type ? userItem.type.charAt(0).toUpperCase() + userItem.type.slice(1) : 'N/A'}
+                            </span>
+                            <span className={`tag tag-condition ${userItem.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
+                              {userItem.condition === 'New' ? '🆕' :
+                               userItem.condition === 'Like New' ? '✨' :
+                               userItem.condition === 'Good' ? '👍' :
+                               userItem.condition === 'Fair' ? '👌' :
+                               userItem.condition === 'Poor' ? '⚠️' : '❓'}{' '}
+                              {userItem.condition || 'N/A'}
+                            </span>
+                            <span className={`tag tag-category ${userItem.category}`}>
+                              {userItem.category === 'furniture' ? '🛋️' :
+                               userItem.category === 'electronics' ? '💻' :
+                               userItem.category === 'books' ? '📚' :
+                               userItem.category === 'clothing' ? '👕' :
+                               userItem.category === 'sports-equipment' ? '🏀' :
+                               userItem.category === 'musical-instruments' ? '🎸' :
+                               userItem.category === 'tools' ? '🛠️' :
+                               userItem.category === 'art-supplies' ? '🎨' :
+                               userItem.category === 'other' ? '❔' : '❓'}{' '}
+                              {userItem.category || 'N/A'}
+                            </span>
+                          </div> */}
+                        </div>
                       </div>
-                      <div className="item-tags tomato-style">
-                        <span className={`tag tag-type ${userItem.type}`}>
-                          {userItem.type === 'barter' ? '🔄' : userItem.type === 'giveaway' ? '🎁' : '❓'}{' '}
-                          {userItem.type ? userItem.type.charAt(0).toUpperCase() + userItem.type.slice(1) : 'N/A'}
-                        </span>
-                        <span className={`tag tag-condition ${userItem.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
-                          {userItem.condition === 'New' ? '🆕' :
-                           userItem.condition === 'Like New' ? '✨' :
-                           userItem.condition === 'Good' ? '👍' :
-                           userItem.condition === 'Fair' ? '👌' :
-                           userItem.condition === 'Poor' ? '⚠️' : '❓'}{' '}
-                          {userItem.condition || 'N/A'}
-                        </span>
-                        <span className={`tag tag-category ${userItem.category}`}>
-                          {userItem.category === 'furniture' ? '🛋️' :
-                           userItem.category === 'electronics' ? '💻' :
-                           userItem.category === 'books' ? '📚' :
-                           userItem.category === 'clothing' ? '👕' :
-                           userItem.category === 'sports-equipment' ? '🏀' :
-                           userItem.category === 'musical-instruments' ? '🎸' :
-                           userItem.category === 'tools' ? '🛠️' :
-                           userItem.category === 'art-supplies' ? '🎨' :
-                           userItem.category === 'other' ? '❔' : '❓'}{' '}
-                          {userItem.category || 'N/A'}
-                        </span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()
             )}
             <textarea
               className="trade-message-input modern-textarea"
@@ -357,7 +412,11 @@ const ItemDetail = () => {
               aria-label="Message to owner"
             />
             <div className="dialog-actions modern-actions">
-              <button onClick={() => setShowTradeDialog(false)} className="modern-cancel-btn">Cancel</button>
+              <button onClick={() => {
+                setShowTradeDialog(false);
+                setSelectedItems([]);
+                setInitialTradeMessage('');
+              }} className="modern-cancel-btn">Cancel</button>
               <button
                 onClick={async () => {
                   if (selectedItems.length === 0) {
@@ -397,6 +456,19 @@ const ItemDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Upload Item Dialog for trade dialog */}
+      <Dialog open={showUploadDialog} onClose={() => setShowUploadDialog(false)} maxWidth="sm" fullWidth>
+        <ItemUpload onSuccess={() => {
+          setShowUploadDialog(false);
+          // Refetch user items after upload
+          if (user) {
+            axios.get('/items/user/available', {
+              headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            }).then(res => setUserItems(res.data));
+          }
+        }} />
+      </Dialog>
     </div>
   );
 };
