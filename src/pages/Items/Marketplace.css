@@ -178,7 +178,7 @@ html, body {
 .user-items-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .item-card.tomato-style {
@@ -190,7 +190,8 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 0;
+  padding: 0 !important;
+  margin: 0 !important;
   border: 1.5px solid var(--color-border);
   text-decoration: none;
   color: inherit;
@@ -240,7 +241,7 @@ html, body {
 .status-badge.traded { background: #e74c3c; color: #fff; }
 
 .item-info.tomato-style {
-  padding: 1.2rem 1rem 1rem 1rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.5rem !important;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;

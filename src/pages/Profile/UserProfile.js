@@ -180,8 +180,9 @@ const UserProfile = () => {
                       e.stopPropagation();
                       setItemToDelete(item);
                       setShowDeleteDialog(true);
+                      console.log('Delete dialog opened for item:', item);
                     }}
-                  >✕</button>
+                  >X</button>
                 </div>
                 <div className="item-info tomato-style">
                   <div className="item-title tomato-style">{item.title}</div>
