@@ -2,17 +2,17 @@ import { S3 } from '@aws-sdk/client-s3';
 // import { GetObjectCommand } from '@aws-sdk/client-s3';
 // Validate required environment variables
 console.log('process.env.REACT_APP_AWS_ACCESS_KEY_ID', process.env.REACT_APP_AWS_ACCESS_KEY_ID);
-const requiredEnvVars = [
-  'REACT_APP_AWS_ACCESS_KEY_ID',
-  'REACT_APP_AWS_SECRET_ACCESS_KEY',
-  'REACT_APP_AWS_REGION',
-  'REACT_APP_S3_BUCKET_NAME'
-];
+// const requiredEnvVars = [
+//   'REACT_APP_AWS_ACCESS_KEY_ID',
+//   'REACT_APP_AWS_SECRET_ACCESS_KEY',
+//   'REACT_APP_AWS_REGION',
+//   'REACT_APP_S3_BUCKET_NAME'
+// ];
 
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-if (missingEnvVars.length > 0) {
-  throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
-}
+// const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+// if (missingEnvVars.length > 0) {
+//   throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+// }
 
 // AWS S3 Configuration
 export const AWS_CONFIG = {
