@@ -99,7 +99,7 @@ const UserProfile = () => {
     // If it's a single URL (old format)
     if (typeof imageUrls === 'string') {
       if (imageUrls.startsWith('http')) return imageUrls;
-      return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrls}`;
+      return `${process.env.REACT_APP_API_URL || ''}${imageUrls}`;
     }
     return '';
   };
