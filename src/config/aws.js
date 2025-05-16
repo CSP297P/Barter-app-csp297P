@@ -1,7 +1,7 @@
 import { S3 } from '@aws-sdk/client-s3';
 // import { GetObjectCommand } from '@aws-sdk/client-s3';
 // Validate required environment variables
-console.log('process.env.REACT_APP_AWS_ACCESS_KEY_ID', process.env.REACT_APP_AWS_ACCESS_KEY_ID);
+console.log('process.env.REACT_APP_AWS_ACCESS_KEY_ID', process.env);
 // const requiredEnvVars = [
 //   'REACT_APP_AWS_ACCESS_KEY_ID',
 //   'REACT_APP_AWS_SECRET_ACCESS_KEY',
