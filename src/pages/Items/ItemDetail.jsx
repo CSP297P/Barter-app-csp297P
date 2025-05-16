@@ -158,7 +158,7 @@ const ItemDetail = () => {
     // Handle old format (single imageUrl)
     if (item.imageUrl) {
       if (item.imageUrl.startsWith('http')) return [item.imageUrl];
-      return [`http://localhost:${process.env.REACT_APP_API_PORT}${item.imageUrl}`];
+      return [`${process.env.REACT_APP_API_URL || ''}${item.imageUrl}`];
     }
     return [];
   };

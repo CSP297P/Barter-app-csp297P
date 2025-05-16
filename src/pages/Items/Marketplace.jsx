@@ -43,7 +43,7 @@ const Marketplace = () => {
       try {
         setLoading(true);
         console.log("API URL: " + process.env.REACT_APP_API_URL);
-        const response = await axios.get('/items');
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/items`);
         console.log('Fetched items:', response.data);
         // Map through items to ensure owner information is properly structured
         const processedItems = response.data.map(item => ({
@@ -69,7 +69,7 @@ const Marketplace = () => {
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `http://localhost:${process.env.REACT_APP_API_PORT}${imageUrl}`;
+    return `${process.env.REACT_APP_API_URL}${imageUrl}`;
   };
 
   const getImageUrls = (item) => {
