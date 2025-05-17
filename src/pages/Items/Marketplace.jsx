@@ -221,7 +221,15 @@ const Marketplace = () => {
                   key={item._id}
                   className="item-card tomato-style"
                   onClick={e => {
-                    // Always navigate to item detail page
+                    // Prevent navigation if a button inside the carousel was clicked
+                    if (
+                      e.target.closest('.carousel-button') ||
+                      e.target.closest('.indicator-dot')
+                    ) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
                     e.preventDefault();
                     navigate(`/item/${item._id}`);
                   }}
