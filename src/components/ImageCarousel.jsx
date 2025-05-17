@@ -7,18 +7,24 @@ const ImageCarousel = ({ images }) => {
   const handleCarouselClick = (e) => {};
 
   const goToNext = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setCurrentIndex((prevIndex) => 
       prevIndex === images.length - 1 ? 0 : prevIndex + 1
     );
   };
 
   const goToPrevious = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setCurrentIndex((prevIndex) => 
       prevIndex === 0 ? images.length - 1 : prevIndex - 1
     );
   };
 
   const goToIndex = (e, index) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     setCurrentIndex(index);
   };
 
@@ -43,7 +49,6 @@ const ImageCarousel = ({ images }) => {
             src={images[currentIndex]} 
             alt={`Product image ${currentIndex + 1}`}
             className="carousel-image"
-            onClick={handleCarouselClick}
           />
         </div>
         {images.length > 1 && (

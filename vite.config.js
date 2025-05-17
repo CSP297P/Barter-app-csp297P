@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
             importPrefixPlugin(),
             htmlPlugin(mode),
             svgrPlugin(),
+            historyFallbackPlugin(),
         ],
         server: {
             proxy: {
@@ -193,6 +194,18 @@ function htmlPlugin(mode) {
             handler(html) {
                 return html.replace(/%(.*?)%/g, (match, p1) => env[p1] ?? match);
             },
+        },
+    };
+}
+function historyFallbackPlugin() {
+    return {
+        name: "history-fallback-plugin",
+        config() {
+            return {
+                server: {
+                    historyApiFallback: true
+                }
+            };
         },
     };
 }

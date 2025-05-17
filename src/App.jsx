@@ -86,6 +86,32 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+function AppWithSocket({ theme, toggleTheme }) {
+  const { user } = useContext(AuthContext);
+  return (
+    <SocketProvider user={user}>
+      <AppContainer>
+        <Router>
+          <Navbar onThemeToggle={toggleTheme} />
+          <MainContent>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/item/:id" element={<ItemDetail />} />
+              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/upload" element={<ProtectedRoute><ItemUpload /></ProtectedRoute>} />
+              <Route path="/edit/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
+            </Routes>
+          </MainContent>
+        </Router>
+      </AppContainer>
+    </SocketProvider>
+  );
+}
+
 function App() {
   const [mode, setMode] = useState(() => {
     const savedMode = localStorage.getItem('themeMode');
@@ -107,26 +133,7 @@ function App() {
     <MuiThemeProvider theme={theme}>
       <StyledThemeProvider theme={theme}>
         <AuthProvider>
-          <SocketProvider>
-            <AppContainer>
-              <Router>
-                <Navbar onThemeToggle={toggleTheme} />
-                <MainContent>
-                  <Routes>
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/marketplace" element={<Marketplace />} />
-                    <Route path="/item/:id" element={<ItemDetail />} />
-                    <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                    <Route path="/upload" element={<ProtectedRoute><ItemUpload /></ProtectedRoute>} />
-                    <Route path="/edit/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
-                  </Routes>
-                </MainContent>
-              </Router>
-            </AppContainer>
-          </SocketProvider>
+          <AppWithSocket theme={theme} toggleTheme={toggleTheme} />
         </AuthProvider>
       </StyledThemeProvider>
     </MuiThemeProvider>
