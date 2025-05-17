@@ -12,7 +12,8 @@ import {
   Alert,
   useTheme,
   InputAdornment,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -27,17 +28,23 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { signIn } = useContext(AuthContext);
   const navigate = useNavigate();
   const theme = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+
     try {
       await signIn(email, password);
       navigate('/');
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to sign in');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,6 +163,7 @@ const Login = () => {
             type="submit"
             fullWidth
             variant="contained"
+            disabled={loading}
             sx={{
               mt: 2,
               mb: 3,
@@ -172,7 +180,11 @@ const Login = () => {
               },
             }}
           >
-            Sign In
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              'Sign In'
+            )}
           </Button>
 
           <Box sx={{ textAlign: 'center', mt: 2 }}>

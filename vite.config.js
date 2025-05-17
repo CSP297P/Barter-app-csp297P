@@ -17,6 +17,17 @@ export default defineConfig(({ mode }) => {
             htmlPlugin(mode),
             svgrPlugin(),
         ],
+        server: {
+            proxy: {
+                '/api': {
+                    target: 'http://localhost:5001',
+                    changeOrigin: true,
+                },
+            },
+        },
+        resolve: {
+            extensions: ['.js', '.jsx', '.json']
+        }
     };
 });
 function setEnv(mode) {
