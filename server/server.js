@@ -1,7 +1,7 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
 const authRoutes = require('./routes/auth');
@@ -10,10 +10,9 @@ const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chats');
 const tradeSessionRoutes = require('./routes/tradeSessions');
 const messageRoutes = require('./routes/messages');
+const testRoutes = require('./routes/test');
 const http = require('http');
 const initializeSocketService = require('./services/socketService');
-
-dotenv.config();
 
 const app = express();
 
@@ -46,6 +45,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/trade-sessions', tradeSessionRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/test', testRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

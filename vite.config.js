@@ -18,6 +18,17 @@ export default defineConfig(({ mode }) => {
             svgrPlugin(),
             historyFallbackPlugin(),
         ],
+        server: {
+            proxy: {
+                '/api': {
+                    target: 'http://localhost:5001',
+                    changeOrigin: true,
+                },
+            },
+        },
+        resolve: {
+            extensions: ['.js', '.jsx', '.json']
+        }
     };
 });
 function setEnv(mode) {

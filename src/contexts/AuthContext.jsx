@@ -1,11 +1,30 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { login, signup, logout, getUserProfile } from '../services/mongodb';
+import axios from 'axios';
+import config from '../config';
+
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: config.API_BASE_URL
+});
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const getUserProfile = async (userId) => {
+    try {
+      const response = await api.get(`/users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,11 +49,17 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     try {
-      const response = await login(email, password);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('userId', response.user._id);
-      setUser(response.user);
-      return response;
+      // Regular login without 2FA
+      const response = await api.post('/auth/login', {
+        email,
+        password
+      });
+
+      // Store token and user data
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+      setUser(response.data.user);
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -42,11 +67,30 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = async (email, password, displayName) => {
     try {
-      const response = await signup(email, password, displayName);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('userId', response.user._id);
-      setUser(response.user);
-      return response;
+      // Step 1: Initial signup request
+      const response = await api.post('/auth/signup', {
+        email,
+        password,
+        displayName
+      });
+      // Only return email for verification step
+      return { email };
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const verifySignup = async (email, code) => {
+    try {
+      const response = await api.post('/auth/verify-signup', {
+        email,
+        code
+      });
+      // Store token and user data after successful verification
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+      setUser(response.data.user);
+      return response.data;
     } catch (error) {
       throw error;
     }
@@ -54,7 +98,7 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      await logout();
+      await api.post('/auth/logout');
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       setUser(null);
@@ -63,8 +107,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const requestPasswordReset = async (email) => {
+    try {
+      const response = await api.post('/auth/request-password-reset', { email });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email, code, newPassword) => {
+    try {
+      const response = await api.post('/auth/reset-password', {
+        email,
+        code,
+        newPassword
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signIn, 
+      signUp,
+      verifySignup,
+      signOut,
+      requestPasswordReset,
+      resetPassword
+    }}>
       {children}
     </AuthContext.Provider>
   );

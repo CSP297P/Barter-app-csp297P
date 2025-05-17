@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  isVerified: {
+    type: Boolean,
+    default: true // Existing users will be verified by default
   }
 });
 
