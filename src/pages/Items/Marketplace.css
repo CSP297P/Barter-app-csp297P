@@ -100,44 +100,37 @@ html, body {
 }
 
 .filter-pane {
-  min-width: 220px;
+  min-width: 180px;
+  padding: 1.2rem 0.7rem 0.7rem 0.7rem;
+  gap: 1.2rem;
   background: var(--color-bg-card);
   border-radius: 14px;
   box-shadow: var(--color-shadow);
-  padding: 2rem 1.2rem 1.2rem 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
   height: fit-content;
 }
 
+.filter-section {
+  margin-bottom: 1.1rem;
+}
+
 .filter-section h3 {
-  color: var(--color-primary);
-  font-size: 1.1rem;
-  margin-bottom: 0.7rem;
-  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 1rem;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-  transition: background 0.2s;
+  font-size: 0.97rem;
+  gap: 0.35rem;
+  padding: 0.1rem 0.2rem;
+  margin-bottom: 0.1rem;
 }
-.checkbox-label:hover {
-  background: rgba(25, 118, 210, 0.07);
-}
+
 .checkbox-label input[type="checkbox"] {
   accent-color: var(--color-primary);
   width: 1.1em;
@@ -276,17 +269,20 @@ html, body {
   margin-top: 0.3rem;
   flex-wrap: wrap;
 }
-.tag, .tag-type, .tag-category, .tag-condition {
-  background: var(--color-primary);
-  color: #fff !important;
-  border-radius: 6px;
-  padding: 2px 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-  opacity: 0.93;
+
+.tag-type.giveaway {
+  color: #1976d2;
+  border-color: #1976d2;
+}
+
+.tag-condition.good {
+  color: #0288d1;
+  border-color: #0288d1;
+}
+
+.tag-condition.new {
+  color: #43a047;
+  border-color: #43a047;
 }
 
 .no-items {
@@ -852,7 +848,7 @@ html, body {
 .tag-type.barter { background: #388e3c; }
 .tag-type.giveaway { background: #1976d2; }
 
-/* Condition colors */
+/* Condition colors (examples, add more as needed) */
 .tag-condition.new { background: #43a047; }
 .tag-condition.like-new { background: #7cb342; }
 .tag-condition.good { background: #0288d1; }
@@ -961,4 +957,76 @@ html, body {
 }
 .dark .search-input::placeholder {
   color: #b0b8c1;
+}
+
+/* Remove old button-like tag backgrounds and text color overrides */
+.tag-type.barter,
+.tag-type.giveaway,
+.tag-condition.new,
+.tag-condition.like-new,
+.tag-condition.good,
+.tag-condition.fair,
+.tag-condition.poor,
+.tag-category.furniture,
+.tag-category.electronics,
+.tag-category.books,
+.tag-category.clothing,
+.tag-category.sports-equipment,
+.tag-category.musical-instruments,
+.tag-category.tools,
+.tag-category.art-supplies,
+.tag-category.other {
+  background: unset;
+  border: unset;
+}
+
+.tag, .tag-type, .tag-category, .tag-condition {
+  display: inline-block !important;
+  padding: 0.12em 0.7em !important;
+  border-radius: 7px !important;
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+  color: #1976d2 !important;
+  background: transparent !important;
+  border: 1.5px solid #b6d4fa !important;
+  letter-spacing: 0.01em !important;
+  text-transform: capitalize !important;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.07) !important;
+  opacity: 1 !important;
+  margin-right: 0.3em !important;
+  margin-bottom: 0.2em !important;
+  transition: background 0.2s, color 0.2s, border 0.2s !important;
+}
+
+.tag-type.giveaway {
+  color: #1976d2 !important;
+  border-color: #1976d2 !important;
+}
+
+.tag-condition.good {
+  color: #0288d1 !important;
+  border-color: #0288d1 !important;
+}
+
+.tag-condition.new {
+  color: #43a047 !important;
+  border-color: #43a047 !important;
+}
+
+.price-filter-select {
+  border-radius: 8px;
+  border: 1.5px solid var(--color-border);
+  padding: 0.7em 1.2em;
+  font-size: 1rem;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  box-shadow: 0 2px 8px rgba(60,60,60,0.04);
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
+}
+.price-filter-select:focus, .price-filter-select:hover {
+  border: 1.5px solid var(--color-primary);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.08);
 } 
