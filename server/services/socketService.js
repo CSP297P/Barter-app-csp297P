@@ -19,6 +19,9 @@ const initializeSocketService = (io) => {
   });
 
   io.on('connection', (socket) => {
+    // Join user-specific room for real-time trade session updates
+    socket.join(`user_${socket.userId}`);
+
     // Join trade session room
     socket.on('join_trade_session', async ({ sessionId }) => {
       try {
@@ -83,6 +86,16 @@ const initializeSocketService = (io) => {
     socket.on('disconnect', () => {
       // Clean up if needed
     });
+
+    // Broadcast trade approved (already handled in route, but keep for clarity)
+    // socket.on('approve_trade', async ({ sessionId, userId }) => {
+    //   io.to(`trade_session_${sessionId}`).emit('trade_approved', { sessionId, userId });
+    // });
+
+    // Broadcast trade completed (already handled in route, but keep for clarity)
+    // socket.on('confirm_trade', async ({ sessionId }) => {
+    //   io.to(`trade_session_${sessionId}`).emit('trade_completed', { sessionId });
+    // });
   });
 
   return io;

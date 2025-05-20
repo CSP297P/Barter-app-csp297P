@@ -103,7 +103,18 @@ export const updateUserProfile = async (userId, userData) => {
   return response.data;
 };
 
+export const getPublicUserProfile = async (userId) => {
+  const response = await axios.get(`/users/${userId}/public`);
+  return response.data;
+};
+
 // Helper function to check if email is UCI email
 export const isUciEmail = (email) => {
   return email.endsWith('@uci.edu');
+};
+
+// rateUser now requires auth and prevents self-rating/duplicates
+export const rateUser = async (userId, rating) => {
+  const response = await axios.post(`/users/${userId}/rate`, { rating });
+  return response.data;
 }; 

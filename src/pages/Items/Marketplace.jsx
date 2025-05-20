@@ -362,9 +362,9 @@ const Marketplace = () => {
                     <div className="item-description tomato-style">{item.description}</div> */}
                     <div className="item-tags tomato-style">
                       {item.type === 'giveaway' && (
-                        <span className={`tag tag-type ${item.type}`}>
+                      <span className={`tag tag-type ${item.type}`}>
                           🎁 Giveaway
-                        </span>
+                      </span>
                       )}
                       <span className={`tag tag-condition ${item.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
                         {item.condition === 'New' ? '🆕' :

@@ -4,16 +4,17 @@ import axios from 'axios';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
 import config from '../../config';
-import { Dialog, DialogContent, IconButton } from '@mui/material';
+import { Dialog, DialogContent, IconButton, Button } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import ItemUpload from '../Items/ItemUpload';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import UserProfileDialog from '../../components/UserProfileDialog';
 import './Messages.css';
 
 const Messages = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  const { joinTradeSession, sendMessage, isConnected, onMessage } = useSocket();
+  const { joinTradeSession, sendMessage, isConnected, onMessage, onTradeApproved, onTradeCompleted, onNewTradeSession, onTradeSessionDeleted, onTradeSessionStatusUpdated } = useSocket();
 
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -26,6 +27,18 @@ const Messages = () => {
   const messagesEndRef = useRef(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, sessionId: null });
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [profileDialogUserId, setProfileDialogUserId] = useState(null);
+  const [tradeApproval, setTradeApproval] = useState({});
+  const [tradeConfirmation, setTradeConfirmation] = useState({});
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [tradeCompleted, setTradeCompleted] = useState(false);
+  const [removeItemsMessage, setRemoveItemsMessage] = useState(false);
+  const [approvingUserName, setApprovingUserName] = useState('');
+  const justApproved = useRef(false);
+  const [hasApprovedLocally, setHasApprovedLocally] = useState(false);
+  const hasApprovedLocallyRef = useRef(false);
+  const lastApprovedConversationIdRef = useRef(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -77,6 +90,7 @@ const Messages = () => {
   // When a conversation is selected, persist its ID
   const handleSelectConversation = (conv) => {
     setSelectedConversation(conv);
+    setMessages([]);
     localStorage.setItem('selectedConversationId', conv._id);
   };
 
@@ -108,21 +122,24 @@ const Messages = () => {
 
   // Join selected conversation
   useEffect(() => {
+    if (!selectedConversation || !isConnected) return;
+    let cancelled = false;
     const joinRoom = async () => {
-      if (selectedConversation && isConnected) {
-        try {
-          await joinTradeSession(selectedConversation._id);
-          // Reset unread count when selecting conversation
-          setUnreadCounts(prev => ({
-            ...prev,
-            [selectedConversation._id]: 0
-          }));
-        } catch (err) {
+      try {
+        await joinTradeSession(selectedConversation._id);
+        if (cancelled) return;
+        setUnreadCounts(prev => ({
+          ...prev,
+          [selectedConversation._id]: 0
+        }));
+      } catch (err) {
+        if (!cancelled) {
           console.error('Failed to join trade session room:', err);
         }
       }
     };
     joinRoom();
+    return () => { cancelled = true; };
   }, [selectedConversation, isConnected, joinTradeSession]);
 
   // Fetch and merge messages for selected conversation when it changes
@@ -155,6 +172,61 @@ const Messages = () => {
       fetchMessages();
     }
   }, [selectedConversation]);
+
+  // Listen for trade approval and completion events
+  useEffect(() => {
+    const unsubApproved = onTradeApproved((data) => {
+      console.log('[SOCKET] trade_approved event received:', data, 'Current user:', user._id, 'tradeApproval:', tradeApproval, 'hasApprovedLocally:', hasApprovedLocally, 'justApproved:', justApproved.current);
+      if (selectedConversation && data.sessionId === selectedConversation._id) {
+        fetchSession(selectedConversation._id);
+        // Only show dialog if the approving user is not the current user AND current user has not approved yet (locally or from backend)
+        if (
+          String(data.userId) !== String(user._id) &&
+          !tradeApproval[user._id] &&
+          !hasApprovedLocallyRef.current &&
+          !justApproved.current
+        ) {
+          const approvingUser = selectedConversation.participants.find(p => String(p._id) === String(data.userId));
+          setApprovingUserName(approvingUser?.displayName || 'The other user');
+          setShowConfirmDialog(true);
+        }
+        // Reset justApproved after handling
+        if (justApproved.current) justApproved.current = false;
+      }
+    });
+    const unsubCompleted = onTradeCompleted((data) => {
+      if (selectedConversation && data.sessionId === selectedConversation._id) {
+        fetchSession(selectedConversation._id);
+        setTradeCompleted(true);
+        setRemoveItemsMessage(true);
+      }
+    });
+    return () => {
+      unsubApproved();
+      unsubCompleted();
+    };
+  }, [selectedConversation, user ? user._id : null, onTradeApproved, onTradeCompleted]);
+
+  // Fetch approvals/confirmations when conversation changes
+  useEffect(() => {
+    if (selectedConversation) {
+      setTradeApproval(selectedConversation.approvals || {});
+      setTradeConfirmation(selectedConversation.confirmations || {});
+      setTradeCompleted(selectedConversation.status === 'completed');
+      setRemoveItemsMessage(false);
+      // Only reset local approval if conversation ID changes
+      const backendApproved = !!(selectedConversation.approvals && selectedConversation.approvals[user._id]);
+      if (backendApproved) {
+        setHasApprovedLocally(true);
+        hasApprovedLocallyRef.current = true;
+        lastApprovedConversationIdRef.current = selectedConversation._id;
+      } else if (lastApprovedConversationIdRef.current !== selectedConversation._id) {
+        setHasApprovedLocally(false);
+        hasApprovedLocallyRef.current = false;
+        lastApprovedConversationIdRef.current = selectedConversation._id;
+      }
+    }
+  }, [selectedConversation, user ? user._id : null]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
@@ -230,6 +302,57 @@ const Messages = () => {
     }
   };
 
+  const fetchSession = async (id) => {
+    const response = await axios.get(`${config.API_BASE_URL}/trade-sessions/${id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+    console.log('[FETCH SESSION]', response.data); // Debug log
+    setSelectedConversation(response.data);
+    setTradeApproval(response.data.approvals || {});
+    setTradeConfirmation(response.data.confirmations || {});
+  };
+
+  const handleApproveTrade = async () => {
+    setHasApprovedLocally(true);
+    hasApprovedLocallyRef.current = true;
+    await axios.post(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}/approve`, {}, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    });
+  };
+
+  useEffect(() => {
+    const unsub = onNewTradeSession((data) => {
+      setConversations(prev => {
+        // Avoid duplicates
+        if (prev.some(conv => conv._id === data.session._id)) return prev;
+        return [data.session, ...prev];
+      });
+    });
+    return () => unsub();
+  }, [onNewTradeSession]);
+
+  useEffect(() => {
+    const unsub = onTradeSessionDeleted((data) => {
+      setConversations(prev => prev.filter(conv => conv._id !== data.sessionId));
+      if (selectedConversation && selectedConversation._id === data.sessionId) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+    });
+    return () => unsub();
+  }, [onTradeSessionDeleted, selectedConversation]);
+
+  useEffect(() => {
+    const unsub = onTradeSessionStatusUpdated((data) => {
+      if (!data?.session?._id) return;
+      setConversations(prev => prev.map(conv => conv._id === data.session._id ? { ...conv, ...data.session } : conv));
+      if (selectedConversation && selectedConversation._id === data.session._id) {
+        setSelectedConversation(prev => ({ ...prev, ...data.session }));
+      }
+    });
+    return () => unsub();
+  }, [onTradeSessionStatusUpdated, selectedConversation]);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -274,6 +397,23 @@ const Messages = () => {
                     {conv.status === 'denied' && (
                       <span className="denied-badge">Rejected</span>
                     )}
+                    <div className="conversation-actions-column">
+                      {conv.status === 'completed' && (
+                        <span className="confirmed-badge">Confirmed</span>
+                      )}
+                      <button
+                        className="view-profile-btn"
+                        onClick={e => {
+                          e.stopPropagation();
+                          setProfileDialogUserId(otherUser?._id);
+                          setProfileDialogOpen(true);
+                        }}
+                        style={{ fontSize: '0.97em' }}
+                        aria-label={`View ${otherUser?.displayName || 'user'}'s profile`}
+                      >
+                        View Profile
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="conversation-actions">
@@ -302,10 +442,33 @@ const Messages = () => {
       <div className="messages-panel modern-messages-panel">
         {selectedConversation ? (
           <>
-            <div className="messages-header modern-messages-header">
+            <div className="messages-header modern-messages-header" style={{ position: 'relative' }}>
               {selectedConversation
                 ? `Chat with ${selectedConversation.participants.find(p => p._id !== user._id)?.displayName || 'User'}`
                 : 'Chat'}
+              {/* Approve/Confirm Trade buttons absolutely positioned in top right */}
+              {(isActive || tradeCompleted) && (
+                <span style={{ position: 'absolute', top: 8, right: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {tradeCompleted || Object.keys(tradeApproval).length === 2 ? (
+                    <span className="confirmed-message" style={{ color: '#388e3c', fontWeight: 500 }}>
+                      Trade Confirmed
+                    </span>
+                  ) : (
+                    <>
+                      {!tradeApproval[user._id] && (
+                        <Button variant="contained" color="primary" size="small" onClick={handleApproveTrade}>
+                          Approve Trade
+                        </Button>
+                      )}
+                      {tradeApproval[user._id] && Object.keys(tradeApproval).length < 2 && (
+                        <span style={{ color: '#888', fontWeight: 500, fontSize: '0.95em' }}>
+                          Waiting for approval from the other user.
+                        </span>
+                      )}
+                    </>
+                  )}
+                </span>
+              )}
             </div>
             <div className="messages-container modern-messages-container">
               {isPending ? (
@@ -328,7 +491,7 @@ const Messages = () => {
                 <div className="denied-info">
                   <p>This trade request was rejected.</p>
                 </div>
-              ) : isActive ? (
+              ) : ( // Show chat for active or completed
                 messages.length === 0 ? (
                   <div className="no-messages">No messages yet. Start the conversation!</div>
                 ) : (
@@ -371,7 +534,21 @@ const Messages = () => {
                     <div ref={messagesEndRef} />
                   </>
                 )
-              ) : null}
+              )}
+              {(isActive || tradeCompleted) && (
+                <div className="trade-approval-section">
+                  {removeItemsMessage && (
+                    <div className="remove-items-message">
+                      Trade completed! Please remove the related items from your profile.
+                    </div>
+                  )}
+                  {tradeCompleted && (
+                    <div className="trade-whisper-message">
+                      <em>Please delete the traded items from your portfolio to keep your listings up to date.</em>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="message-input modern-message-input">
               <textarea
@@ -492,6 +669,26 @@ const Messages = () => {
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       />
+
+      <UserProfileDialog
+        open={profileDialogOpen}
+        userId={profileDialogUserId}
+        onClose={() => setProfileDialogOpen(false)}
+      />
+
+      <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>
+        <DialogContent>
+          <div style={{ padding: 16 }}>
+            <h3>{approvingUserName} has approved the trade. Do you also approve?</h3>
+            <Button variant="contained" color="success" onClick={async () => { await handleApproveTrade(); setShowConfirmDialog(false); }}>
+              Confirm
+            </Button>
+            <Button variant="outlined" onClick={() => setShowConfirmDialog(false)} style={{ marginLeft: 8 }}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

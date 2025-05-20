@@ -61,6 +61,9 @@ const io = require('socket.io')(server, {
   }
 });
 
+// Attach io to app so you can use req.app.get('io') in routes
+app.set('io', io);
+
 // Initialize Socket.IO service
 initializeSocketService(io);
 

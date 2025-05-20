@@ -21,6 +21,8 @@ router.get('/user', auth, async (req, res) => {
     // Transform the data to match the client's expectations
     const transformedSessions = sessions.map(session => ({
       ...session.toObject(),
+      approvals: session.approvals ? Object.fromEntries(session.approvals.entries()) : {},
+      confirmations: session.confirmations ? Object.fromEntries(session.confirmations.entries()) : {},
       item: session.itemIds[0], // Use the first item as the main item
       offeredItems: session.offeredItemIds
     }));
@@ -55,6 +57,8 @@ router.get('/:id', auth, async (req, res) => {
     // Transform the data to match the client's expectations
     const transformedSession = {
       ...session.toObject(),
+      approvals: session.approvals ? Object.fromEntries(session.approvals.entries()) : {},
+      confirmations: session.confirmations ? Object.fromEntries(session.confirmations.entries()) : {},
       item: session.itemIds[0], // Use the first item as the main item
       offeredItems: session.offeredItemIds
     };
@@ -119,6 +123,14 @@ router.post('/', auth, async (req, res) => {
       offeredItems: session.offeredItemIds
     };
 
+    // Emit new_trade_session event to both participants
+    const io = req.app.get('io');
+    session.participants.forEach(participant => {
+      io.to(`user_${participant._id}`).emit('new_trade_session', {
+        session: transformedSession
+      });
+    });
+
     res.status(201).json(transformedSession);
   } catch (error) {
     console.error('Error creating trade session:', {
@@ -169,6 +181,14 @@ router.put('/:id/status', auth, async (req, res) => {
       item: session.itemIds[0] // Use the first item as the main item
     };
 
+    // Emit real-time update to both participants
+    const io = req.app.get('io');
+    session.participants.forEach(participant => {
+      io.to(`user_${participant._id}`).emit('trade_session_status_updated', {
+        session: transformedSession
+      });
+    });
+
     res.json(transformedSession);
   } catch (error) {
     console.error('Error updating trade session:', error);
@@ -196,10 +216,66 @@ router.delete('/:id', auth, async (req, res) => {
     // Delete the trade session
     await session.deleteOne();
 
+    // Emit trade_session_deleted event to both participants
+    const io = req.app.get('io');
+    session.participants.forEach(participant => {
+      io.to(`user_${participant._id}`).emit('trade_session_deleted', {
+        sessionId: session._id
+      });
+    });
+
     res.json({ message: 'Trade session and messages deleted successfully' });
   } catch (error) {
     console.error('Error deleting trade session:', error);
     res.status(500).json({ message: 'Error deleting trade session' });
+  }
+});
+
+// Approve trade (user clicks approve)
+router.post('/:id/approve', auth, async (req, res) => {
+  try {
+    const session = await TradeSession.findById(req.params.id);
+    if (!session) return res.status(404).json({ message: 'Trade session not found' });
+    if (!session.participants.some(p => p.toString() === req.user.userId)) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    // Use Map.set for approvals
+    session.approvals.set(req.user.userId, true);
+    await session.save();
+    // Debug log after saving
+    console.log('After approval:', Array.from(session.approvals.entries()));
+    // If both users have approved, complete the trade
+    const allApproved = session.participants.every(p => session.approvals.get(p.toString()));
+    if (allApproved) {
+      session.status = 'completed';
+      await session.save();
+      req.app.get('io').to(`trade_session_${session._id}`).emit('trade_completed', {
+        sessionId: session._id
+      });
+      // Emit trade_session_status_updated to both participants
+      await session.populate('participants', 'displayName');
+      await session.populate({
+        path: 'itemIds',
+        options: { limit: 1 }
+      });
+      const transformedSession = {
+        ...session.toObject(),
+        item: session.itemIds[0]
+      };
+      session.participants.forEach(participant => {
+        req.app.get('io').to(`user_${participant._id}`).emit('trade_session_status_updated', {
+          session: transformedSession
+        });
+      });
+    }
+    // Emit to both users in the session room
+    req.app.get('io').to(`trade_session_${session._id}`).emit('trade_approved', {
+      sessionId: session._id,
+      userId: req.user.userId
+    });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Error approving trade' });
   }
 });
 

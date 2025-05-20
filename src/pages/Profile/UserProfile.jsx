@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
-import { getUserItems } from '../../services/mongodb';
+import { getUserItems, getPublicUserProfile } from '../../services/mongodb';
 import axios from 'axios';
 import ImageCarousel from '../../components/ImageCarousel';
 import EditItemDialog from '../../components/EditItemDialog';
 import ItemUpload from '../../pages/Items/ItemUpload';
 import { Dialog } from '@mui/material';
 import './UserProfile.css';
+import { useParams } from 'react-router-dom';
 
 const UserProfile = () => {
   const { user } = useContext(AuthContext);
+  const { userId } = useParams();
   const [items, setItems] = useState([]);
+  const [profileUser, setProfileUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingItemId, setDeletingItemId] = useState(null);
@@ -19,28 +22,43 @@ const UserProfile = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [lastTried, setLastTried] = useState(Date.now());
 
   useEffect(() => {
-    const fetchUserItems = async () => {
-      if (!user) return;
-
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError('');
       try {
-        const data = await getUserItems(user._id);
-        setItems(data);
+        if (userId) {
+          // Viewing another user's profile
+          const data = await getPublicUserProfile(userId);
+          setProfileUser(data);
+          setItems(data.postings || []);
+        } else if (user) {
+          // Viewing own profile
+          setProfileUser(user);
+          const data = await getUserItems(user._id);
+          setItems(data);
+        }
       } catch (error) {
-        setError('Failed to load user items');
-        console.error('Error fetching user items:', error);
+        if (error.response && error.response.status === 404) {
+          setError('User not found.');
+        } else if (error.response && error.response.data && error.response.data.message) {
+          setError(error.response.data.message);
+        } else if (error.message) {
+          setError(error.message);
+        } else {
+          setError('Failed to load user profile.');
+        }
       } finally {
         setLoading(false);
       }
     };
-
-    fetchUserItems();
-  }, [user]);
+    fetchProfile();
+  }, [userId, user, lastTried]);
 
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
-    
     setDeletingItemId(itemToDelete._id);
     try {
       console.log('Current user ID:', user._id);
@@ -111,12 +129,26 @@ const UserProfile = () => {
     return `$${min} - $${max}`;
   };
 
-  if (!user) {
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  if (!user && !userId) {
     return <div className="error">Please log in to view your profile</div>;
   }
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
+  if (error) {
+    return (
+      <div className="error">
+        {error}
+        <br />
+        <button className="profile-retry-btn" onClick={() => setLastTried(Date.now())}>Retry</button>
+      </div>
+    );
+  }
+
+  if (!profileUser) {
+    return <div className="error">User not found or could not be loaded.</div>;
   }
 
   return (
@@ -124,38 +156,45 @@ const UserProfile = () => {
       <div className="profile-header">
         {/* Profile Avatar */}
         <div className="profile-avatar">
-          {user.photoURL ? (
-            <img src={user.photoURL} alt={user.displayName} />
+          {profileUser.photoURL ? (
+            <img src={profileUser.photoURL} alt={profileUser.displayName} />
           ) : (
             <span>
-              {user.displayName
-                ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
+              {profileUser.displayName
+                ? profileUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
                 : <i className="fa fa-user" />}
             </span>
           )}
         </div>
         <div className="profile-info">
-          <h2>{user.displayName}</h2>
-          <p>{user.email}</p>
+          <h2>{profileUser.displayName}</h2>
+          {profileUser.email && <p>{profileUser.email}</p>}
+          <div className="profile-stats">
+            <span className="profile-stat">⭐ Rating: {profileUser.rating || 0}</span>
+            <span className="profile-stat">✅ Successful Trades: {profileUser.totalSuccessfulTrades || 0}</span>
+            <span className="profile-stat">📦 Listed Items: {profileUser.totalListedItems || items.length}</span>
+          </div>
         </div>
       </div>
 
       <div className="user-items">
         <div className="items-header">
-          <h2>My Items</h2>
-          <button 
-            className="profile-button success upload-item-button"
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            Upload New Item
-          </button>
+          <h2>{userId ? `${profileUser.displayName}'s Items` : 'My Items'}</h2>
+          {!userId && (
+            <button 
+              className="profile-button success upload-item-button"
+              onClick={() => setUploadDialogOpen(true)}
+            >
+              Upload New Item
+            </button>
+          )}
         </div>
 
         {error && <div className="error-message">{error}</div>}
 
         {!items.length ? (
           <div className="no-items">
-            <p>You haven't posted any items yet.</p>
+            <p>{userId ? 'This user has not posted any items yet.' : "You haven't posted any items yet."}</p>
           </div>
         ) : (
           <div className="user-items-grid">
@@ -163,26 +202,29 @@ const UserProfile = () => {
               <div
                 key={item._id}
                 className="item-card tomato-style"
-                style={{ cursor: 'pointer', position: 'relative' }}
+                style={{ cursor: userId ? 'default' : 'pointer', position: 'relative' }}
                 onClick={() => {
-                  setEditItem(item);
-                  setEditDialogOpen(true);
+                  if (!userId) {
+                    setEditItem(item);
+                    setEditDialogOpen(true);
+                  }
                 }}
               >
                 <div className="item-image-container tomato-style" style={{ position: 'relative' }}>
                   <ImageCarousel
                     images={Array.isArray(item.imageUrls) ? item.imageUrls : [getImageUrl(item.imageUrl)]}
                   />
-                  <button
-                    className="delete-item-btn"
-                    title="Delete item"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setItemToDelete(item);
-                      setShowDeleteDialog(true);
-                      console.log('Delete dialog opened for item:', item);
-                    }}
-                  >X</button>
+                  {!userId && (
+                    <button
+                      className="delete-item-btn"
+                      title="Delete item"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setItemToDelete(item);
+                        setShowDeleteDialog(true);
+                      }}
+                    >X</button>
+                  )}
                 </div>
                 <div className="item-info tomato-style">
                   <div className="item-title tomato-style">{item.title}</div>
@@ -224,34 +266,43 @@ const UserProfile = () => {
       </div>
 
       {/* Floating Action Button for Upload (mobile only) */}
-      <button
-        className="fab-upload-btn"
-        title="Upload New Item"
-        onClick={() => setUploadDialogOpen(true)}
-      >
-        +
-      </button>
+      {!userId && (
+        <button
+          className="fab-upload-btn"
+          title="Upload New Item"
+          onClick={() => setUploadDialogOpen(true)}
+        >
+          +
+        </button>
+      )}
 
       {showDeleteDialog && (
         <div className="dialog-overlay" onClick={handleDeleteCancel}>
           <div className="dialog-content" onClick={e => e.stopPropagation()}>
-            <h2>Delete Item</h2>
-            <p>Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.</p>
-            <div className="dialog-actions">
-              <button 
-                className="cancel-button"
-                onClick={handleDeleteCancel}
-              >
-                Cancel
-              </button>
-              <button 
-                className="delete-button"
-                onClick={handleDeleteConfirm}
-                disabled={deletingItemId === itemToDelete?._id}
-              >
-                {deletingItemId === itemToDelete?._id ? 'Deleting...' : 'Delete'}
-              </button>
+            <button
+              className="delete-dialog-close-btn"
+              onClick={handleDeleteCancel}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <div className="delete-dialog-content-center">
+              <div className="delete-dialog-warning-icon">
+                <span role="img" aria-label="Warning">⚠️</span>
+              </div>
+              <h2 className="delete-dialog-title">Delete Item</h2>
+              <div className="delete-dialog-message">
+                Are you sure you want to delete <b>"{itemToDelete?.title}"</b>?<br />
+                <span className="delete-dialog-warning-text">This action cannot be undone.</span>
+              </div>
             </div>
+            <button
+              className="delete-dialog-confirm-btn"
+              onClick={handleDeleteConfirm}
+              disabled={deletingItemId === itemToDelete._id}
+            >
+              {deletingItemId === itemToDelete?._id ? 'Deleting...' : 'Confirm Delete'}
+            </button>
           </div>
         </div>
       )}
