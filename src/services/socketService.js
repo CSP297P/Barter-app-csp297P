@@ -6,6 +6,11 @@ class SocketService {
     this.socket = null;
     this.messageHandlers = new Set();
     this.errorHandlers = new Set();
+    this.tradeApprovedHandlers = new Set();
+    this.tradeCompletedHandlers = new Set();
+    this.newTradeSessionHandlers = new Set();
+    this.tradeSessionDeletedHandlers = new Set();
+    this.tradeSessionStatusUpdatedHandlers = new Set();
   }
 
   connect() {
@@ -29,6 +34,26 @@ class SocketService {
 
     this.socket.on('message_received', (message) => {
       this.messageHandlers.forEach(handler => handler(message));
+    });
+
+    this.socket.on('trade_approved', (data) => {
+      this.tradeApprovedHandlers.forEach(handler => handler(data));
+    });
+
+    this.socket.on('trade_completed', (data) => {
+      this.tradeCompletedHandlers.forEach(handler => handler(data));
+    });
+
+    this.socket.on('new_trade_session', (data) => {
+      this.newTradeSessionHandlers.forEach(handler => handler(data));
+    });
+
+    this.socket.on('trade_session_deleted', (data) => {
+      this.tradeSessionDeletedHandlers.forEach(handler => handler(data));
+    });
+
+    this.socket.on('trade_session_status_updated', (data) => {
+      this.tradeSessionStatusUpdatedHandlers.forEach(handler => handler(data));
     });
 
     this.socket.on('error', (error) => {
@@ -106,6 +131,31 @@ class SocketService {
   onError(handler) {
     this.errorHandlers.add(handler);
     return () => this.errorHandlers.delete(handler);
+  }
+
+  onTradeApproved(handler) {
+    this.tradeApprovedHandlers.add(handler);
+    return () => this.tradeApprovedHandlers.delete(handler);
+  }
+
+  onTradeCompleted(handler) {
+    this.tradeCompletedHandlers.add(handler);
+    return () => this.tradeCompletedHandlers.delete(handler);
+  }
+
+  onNewTradeSession(handler) {
+    this.newTradeSessionHandlers.add(handler);
+    return () => this.newTradeSessionHandlers.delete(handler);
+  }
+
+  onTradeSessionDeleted(handler) {
+    this.tradeSessionDeletedHandlers.add(handler);
+    return () => this.tradeSessionDeletedHandlers.delete(handler);
+  }
+
+  onTradeSessionStatusUpdated(handler) {
+    this.tradeSessionStatusUpdatedHandlers.add(handler);
+    return () => this.tradeSessionStatusUpdatedHandlers.delete(handler);
   }
 }
 

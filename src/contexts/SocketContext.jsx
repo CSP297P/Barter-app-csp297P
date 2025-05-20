@@ -57,7 +57,12 @@ export const SocketProvider = ({ children, user }) => {
     joinTradeSession: socketService.joinTradeSession.bind(socketService),
     sendMessage: socketService.sendMessage.bind(socketService),
     onMessage: socketService.onMessage.bind(socketService),
-    onError: socketService.onError.bind(socketService)
+    onError: socketService.onError.bind(socketService),
+    onTradeApproved: socketService.onTradeApproved.bind(socketService),
+    onTradeCompleted: socketService.onTradeCompleted.bind(socketService),
+    onNewTradeSession: socketService.onNewTradeSession.bind(socketService),
+    onTradeSessionDeleted: socketService.onTradeSessionDeleted.bind(socketService),
+    onTradeSessionStatusUpdated: socketService.onTradeSessionStatusUpdated.bind(socketService)
   };
 
   return (

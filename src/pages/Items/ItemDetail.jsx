@@ -7,6 +7,7 @@ import ImageCarousel from '../../components/ImageCarousel';
 import './ItemDetail.css';
 import ItemUpload from './ItemUpload';
 import { Dialog } from '@mui/material';
+import CardCarousel from '../../components/CardCarousel';
 
 const formatPriceRange = (range) => {
   if (!range) return 'N/A';
@@ -341,64 +342,14 @@ const ItemDetail = () => {
                 }
                 return (
                   <div className="trade-items-row">
-                    {eligibleItems.map(userItem => (
-                      <div
-                        key={userItem._id}
-                        className={`item-card tomato-style${selectedItems.includes(userItem._id) ? ' selected' : ''}`}
-                        tabIndex={0}
-                        aria-checked={selectedItems.includes(userItem._id)}
-                        role="checkbox"
-                        onClick={() => handleItemSelect(userItem._id)}
-                        onKeyDown={e => {
-                          if (e.key === ' ' || e.key === 'Enter') {
-                            handleItemSelect(userItem._id);
-                          }
-                        }}
-                      >
-                        {/* Selection indicator */}
-                        {selectedItems.includes(userItem._id) && (
-                          <div className="selected-indicator">
-                            <span>✔</span>
-                          </div>
-                        )}
-                        <div className="item-image-container tomato-style">
-                          <ImageCarousel images={getImageUrls(userItem)} />
-                        </div>
-                        <div className="item-info tomato-style">
-                          <div className="item-title tomato-style">{userItem.title}</div>
-                          <div className="item-price tomato-style">{formatPriceRange(userItem.priceRange)}</div>
-                          {/* <div className="item-description tomato-style">
-                            {userItem.description}
-                          </div> */}
-                          {/* <div className="item-tags tomato-style">
-                            <span className={`tag tag-type ${userItem.type}`}>
-                              {userItem.type === 'barter' ? '🔄' : userItem.type === 'giveaway' ? '🎁' : '❓'}{' '}
-                              {userItem.type ? userItem.type.charAt(0).toUpperCase() + userItem.type.slice(1) : 'N/A'}
-                            </span>
-                            <span className={`tag tag-condition ${userItem.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
-                              {userItem.condition === 'New' ? '🆕' :
-                               userItem.condition === 'Like New' ? '✨' :
-                               userItem.condition === 'Good' ? '👍' :
-                               userItem.condition === 'Fair' ? '👌' :
-                               userItem.condition === 'Poor' ? '⚠️' : '❓'}{' '}
-                              {userItem.condition || 'N/A'}
-                            </span>
-                            <span className={`tag tag-category ${userItem.category}`}>
-                              {userItem.category === 'furniture' ? '🛋️' :
-                               userItem.category === 'electronics' ? '💻' :
-                               userItem.category === 'books' ? '📚' :
-                               userItem.category === 'clothing' ? '👕' :
-                               userItem.category === 'sports-equipment' ? '🏀' :
-                               userItem.category === 'musical-instruments' ? '🎸' :
-                               userItem.category === 'tools' ? '🛠️' :
-                               userItem.category === 'art-supplies' ? '🎨' :
-                               userItem.category === 'other' ? '❔' : '❓'}{' '}
-                              {userItem.category || 'N/A'}
-                            </span>
-                          </div> */}
-                        </div>
-                      </div>
-                    ))}
+                    <CardCarousel
+                      items={eligibleItems.map(userItem => ({
+                        ...userItem,
+                        onClick: () => handleItemSelect(userItem._id),
+                        selected: selectedItems.includes(userItem._id),
+                        priceRange: formatPriceRange(userItem.priceRange),
+                      }))}
+                    />
                   </div>
                 );
               })()
