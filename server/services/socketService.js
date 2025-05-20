@@ -73,9 +73,15 @@ const initializeSocketService = (io) => {
           read: false
         });
 
-        // Emit message to all participants in the room
+        // Populate sender's displayName
+        await message.populate('senderId', 'displayName');
+
+        // Emit message to all participants in the room, including senderName
         const roomId = `trade_session_${sessionId}`;
-        io.to(roomId).emit('message_received', message);
+        io.to(roomId).emit('message_received', {
+          ...message.toObject(),
+          senderName: message.senderId.displayName
+        });
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });

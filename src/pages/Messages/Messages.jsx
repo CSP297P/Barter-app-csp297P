@@ -375,7 +375,10 @@ const Messages = () => {
           {conversations.length === 0 ? (
             <div className="no-conversations">No conversations found.</div>
           ) : conversations.map(conv => {
-            const otherUser = conv.participants.find(p => p._id !== user._id);
+            let otherUser = conv.participants.find(p => p._id !== user._id);
+            if (!otherUser && conv.participants.length > 0) {
+              otherUser = conv.participants[0];
+            }
             // Avatar: use first letter of displayName or fallback
             const avatarLetter = (otherUser?.displayName || '?');
             return (
@@ -497,7 +500,8 @@ const Messages = () => {
                 ) : (
                   <>
                     {messages.map(msg => {
-                      const isSent = msg.senderId === user._id;
+                      const isSent = (msg.senderId === user._id) ||
+                                     (typeof msg.senderId === 'object' && msg.senderId && msg.senderId._id === user._id);
                       let formattedDate = 'Just now';
                       if (msg.timestamp) {
                         const dateObj = new Date(msg.timestamp);
@@ -514,8 +518,19 @@ const Messages = () => {
                         }
                       }
                       // Avatar for chat bubbles
-                      const sender = selectedConversation.participants.find(p => p._id === msg.senderId);
+                      const sender = selectedConversation.participants.find(p => (typeof msg.senderId === 'object' ? msg.senderId._id : msg.senderId) === p._id);
                       const senderAvatar = (sender?.displayName || '?');
+                      // Remove all consecutive sender name lines from the start of the content
+                      let cleanContent = msg.content;
+                      if (!isSent && sender?.displayName && cleanContent) {
+                        const senderNameLower = sender.displayName.trim().toLowerCase();
+                        const lines = cleanContent.split(/\r?\n/);
+                        let i = 0;
+                        while (i < lines.length && lines[i].trim().toLowerCase() === senderNameLower) {
+                          i++;
+                        }
+                        cleanContent = lines.slice(i).join('\n');
+                      }
                       return (
                         <div
                           key={msg._id}
@@ -525,7 +540,10 @@ const Messages = () => {
                             <div className="bubble-avatar" aria-label={`Avatar for ${sender?.displayName || 'User'}`}>{senderAvatar}</div>
                           )}
                           <div className="bubble-content">
-                            <p className="message-content">{msg.content}</p>
+                            {!isSent && (
+                              <div className="message-sender-label">{sender?.displayName || 'User'}</div>
+                            )}
+                            <p className="message-content">{cleanContent}</p>
                             <small className="message-date">{formattedDate}</small>
                           </div>
                         </div>

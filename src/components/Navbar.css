@@ -26,6 +26,7 @@
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  position: relative;
 }
 
 .navbar-links a {
@@ -114,4 +115,16 @@
   .navbar-links button {
     font-size: 0.9rem;
   }
+}
+
+/* Notification bell icon */
+.MuiBadge-root {
+  margin-left: 8px;
+}
+
+.notification-bell-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  z-index: 2000;
 } 
