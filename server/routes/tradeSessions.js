@@ -166,6 +166,7 @@ router.put('/:id/status', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
+    const prevStatus = session.status;
     session.status = status;
     await session.save();
 
@@ -180,6 +181,17 @@ router.put('/:id/status', auth, async (req, res) => {
       ...session.toObject(),
       item: session.itemIds[0] // Use the first item as the main item
     };
+
+    // Emit trade_request_accepted if status changed from pending to active
+    if (prevStatus === 'pending' && status === 'active') {
+      const io = req.app.get('io');
+      session.participants.forEach(participant => {
+        io.to(`user_${participant._id}`).emit('trade_request_accepted', {
+          session: transformedSession,
+          acceptedBy: req.user.userId
+        });
+      });
+    }
 
     // Emit real-time update to both participants
     const io = req.app.get('io');
