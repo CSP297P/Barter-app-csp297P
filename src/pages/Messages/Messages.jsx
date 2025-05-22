@@ -597,9 +597,9 @@ const Messages = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="chat-request-actions">
-                      <button className="chat-request-btn accept" onClick={handleAcceptTrade}>Accept</button>
-                      <button className="chat-request-btn reject" onClick={handleDenyTrade}>Reject</button>
+                    <div className="accept-reject-actions">
+                      <button className="accept-btn" onClick={handleAcceptTrade}>Accept</button>
+                      <button className="reject-btn" onClick={handleDenyTrade}>Reject</button>
                     </div>
                   </div>
                 ) : (

@@ -4,7 +4,6 @@ html, body, #root, .App {
   margin: 0;
   padding: 0;
   background: #f4f7fb;
-  overflow: hidden;
 }
 
 .messages-page {
@@ -911,4 +910,44 @@ html, body, #root, .App {
   margin: 0 0 0 12px !important;
   vertical-align: middle;
   align-self: center;
+}
+
+.accept-reject-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 18px;
+}
+.accept-btn, .reject-btn {
+  padding: 12px 36px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  border: 2px solid rgba(0,0,0,0.07);
+  border-radius: 32px;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.14s, border 0.18s;
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(66, 133, 244, 0.13), 0 1.5px 6px rgba(0,0,0,0.07);
+  letter-spacing: 0.03em;
+  outline: none;
+  margin-top: 0;
+}
+.accept-btn {
+  background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%);
+  border-color: #43e97b44;
+}
+.accept-btn:hover {
+  background: linear-gradient(90deg, #38f9d7 0%, #43e97b 100%);
+  transform: scale(1.07) translateY(-2px);
+  box-shadow: 0 8px 32px rgba(67, 233, 123, 0.18);
+  border-color: #43e97b99;
+}
+.reject-btn {
+  background: linear-gradient(90deg, #ff5858 0%, #f09819 100%);
+  border-color: #ff585844;
+}
+.reject-btn:hover {
+  background: linear-gradient(90deg, #f09819 0%, #ff5858 100%);
+  transform: scale(1.07) translateY(-2px);
+  box-shadow: 0 8px 32px rgba(255, 88, 88, 0.18);
+  border-color: #ff585899;
 } 
