@@ -117,4 +117,9 @@ export const isUciEmail = (email) => {
 export const rateUser = async (userId, rating) => {
   const response = await axios.post(`/users/${userId}/rate`, { rating });
   return response.data;
+};
+
+export const updateTradeSessionOfferedItems = async (sessionId, offeredItemIds) => {
+  const response = await axios.put(`/trade-sessions/${sessionId}/offered-items`, { offeredItemIds });
+  return response.data;
 }; 

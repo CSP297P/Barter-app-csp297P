@@ -392,7 +392,6 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
 }
 .dialog-content {
   background: var(--color-bg-card);
@@ -401,7 +400,25 @@ html, body {
   width: 90%;
   max-width: 400px;
   box-shadow: var(--color-shadow);
+  min-height: 200px;
+  position: relative;
+  padding-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
 }
+.dialog-content h2 {
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+  font-size: 1.5rem;
+}
+.dialog-content p {
+  margin: 0 0 1.5rem 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
 .close-button {
   position: absolute;
   top: 10px;

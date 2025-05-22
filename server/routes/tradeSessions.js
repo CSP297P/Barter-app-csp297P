@@ -99,6 +99,16 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Current user must be a participant' });
     }
 
+    // Prevent duplicate trade sessions
+    const existingSession = await TradeSession.findOne({
+      itemIds: itemId,
+      participants: { $all: participants, $size: participants.length },
+      offeredItemIds: { $all: offeredItemIds || [], $size: (offeredItemIds || []).length }
+    });
+    if (existingSession) {
+      return res.status(409).json({ message: 'You have already made this trade request.' });
+    }
+
     const session = new TradeSession({
       participants,
       itemIds: [itemId],
@@ -205,6 +215,31 @@ router.put('/:id/status', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating trade session:', error);
     res.status(500).json({ message: 'Error updating trade session' });
+  }
+});
+
+// Update offered items for a trade session
+router.put('/:id/offered-items', auth, async (req, res) => {
+  try {
+    const { offeredItemIds } = req.body;
+    const session = await TradeSession.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Trade session not found' });
+    }
+    // Check if user is a participant (fix: compare as string)
+    if (!session.participants.some(p => p.toString() === req.user.userId)) {
+      return res.status(403).json({ message: 'Not authorized to update this trade session' });
+    }
+    // Update offeredItemIds
+    session.offeredItemIds = offeredItemIds;
+    await session.save();
+    await session.populate('offeredItemIds');
+    res.json({
+      offeredItems: session.offeredItemIds
+    });
+  } catch (error) {
+    console.error('Error updating offered items:', error);
+    res.status(500).json({ message: 'Error updating offered items' });
   }
 });
 

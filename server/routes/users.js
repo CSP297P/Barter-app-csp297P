@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const upload = require('../middleware/upload');
+const { uploadToS3, getSignedUrlForKey } = require('../services/s3Service');
 
 // Get user profile
 router.get('/:id', async (req, res) => {
@@ -19,28 +21,42 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update user profile
-router.put('/:id', auth, async (req, res) => {
+// Update user profile (with optional profile picture upload)
+router.put('/:id/profile', auth, upload.single('photo'), async (req, res) => {
   try {
-    // Check if user is updating their own profile
     if (req.params.id !== req.user.userId) {
       return res.status(403).json({ message: 'Not authorized' });
     }
-
-    const { displayName, ratings } = req.body;
+    const { displayName } = req.body;
     const updateData = {};
     if (displayName) updateData.displayName = displayName;
-    if (ratings) updateData.ratings = ratings;
-
+    if (req.file) {
+      // Upload to S3
+      const s3Key = await uploadToS3(req.file.buffer || require('fs').readFileSync(req.file.path), req.file.mimetype, 'profile-pictures');
+      updateData.photoKey = s3Key;
+    }
     const user = await User.findByIdAndUpdate(
       req.params.id,
       updateData,
       { new: true }
     ).select('-password');
-
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating profile' });
+    res.status(500).json({ message: 'Error updating profile', error: error.message });
+  }
+});
+
+// Get signed URL for user's profile photo
+router.get('/:id/profile-photo-url', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('photoKey');
+    if (!user || !user.photoKey) {
+      return res.status(404).json({ message: 'Profile photo not found' });
+    }
+    const signedUrl = getSignedUrlForKey(user.photoKey);
+    res.json({ url: signedUrl });
+  } catch (error) {
+    res.status(500).json({ message: 'Error generating signed URL', error: error.message });
   }
 });
 

@@ -6,6 +6,8 @@ import './Marketplace.css';
 import ItemUpload from './ItemUpload';
 import ImageCarousel from '../../components/ImageCarousel';
 import Dialog from '@mui/material/Dialog';
+import { UserRatingDisplay } from '../../components/UserProfileDialog';
+import ItemDetailDialog from './ItemDetailDialog';
 
 const Marketplace = () => {
   const [items, setItems] = useState([]);
@@ -20,6 +22,11 @@ const Marketplace = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 1000]);
+
+  const [ownerPhotoUrls, setOwnerPhotoUrls] = useState({});
+
+  const [itemDetailOpen, setItemDetailOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState(null);
 
   const categoryOptions = [
     { value: 'gaming-console', label: 'Gaming Console' },
@@ -52,7 +59,9 @@ const Marketplace = () => {
         const processedItems = response.data.map(item => ({
           ...item,
           owner: {
-            displayName: item.ownerName || item.owner?.displayName || 'Anonymous'
+            _id: item.owner?._id || item.ownerId,
+            displayName: item.ownerName || item.owner?.displayName || 'Anonymous',
+            photoURL: item.owner?.photoURL
           }
         }));
         console.log('Processed items:', processedItems);
@@ -68,6 +77,30 @@ const Marketplace = () => {
 
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    const fetchOwnerPhotoUrls = async () => {
+      const urls = {};
+      const uniqueOwners = Array.from(new Set(items.map(item => item.owner?._id).filter(Boolean)));
+      await Promise.all(uniqueOwners.map(async (ownerId) => {
+        const owner = items.find(item => item.owner?._id === ownerId)?.owner;
+        if (owner && owner.photoKey) {
+          try {
+            const res = await axios.get(`/users/${ownerId}/profile-photo-url`);
+            urls[ownerId] = res.data.url;
+          } catch {
+            urls[ownerId] = '';
+          }
+        } else if (owner && owner.photoURL) {
+          urls[ownerId] = owner.photoURL;
+        } else {
+          urls[ownerId] = '';
+        }
+      }));
+      setOwnerPhotoUrls(urls);
+    };
+    if (items.length > 0) fetchOwnerPhotoUrls();
+  }, [items]);
 
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return '';
@@ -142,7 +175,9 @@ const Marketplace = () => {
     const processedNewItem = {
       ...newItem,
       owner: {
-        displayName: newItem.ownerName || newItem.owner?.displayName || 'Anonymous'
+        _id: newItem.owner?._id || newItem.ownerId,
+        displayName: newItem.ownerName || newItem.owner?.displayName || 'Anonymous',
+        photoURL: newItem.owner?.photoURL
       }
     };
     setItems(prevItems => [...prevItems, processedNewItem]);
@@ -283,7 +318,6 @@ const Marketplace = () => {
                   key={item._id}
                   className="item-card tomato-style"
                   onClick={e => {
-                    // Prevent navigation if a button inside the carousel was clicked
                     if (
                       e.target.closest('.carousel-button') ||
                       e.target.closest('.indicator-dot')
@@ -293,7 +327,8 @@ const Marketplace = () => {
                       return;
                     }
                     e.preventDefault();
-                    navigate(`/item/${item._id}`);
+                    setSelectedItemId(item._id);
+                    setItemDetailOpen(true);
                   }}
                   style={{ cursor: 'pointer' }}
                 >
@@ -308,7 +343,7 @@ const Marketplace = () => {
                     <div className="item-owner-avatar" style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
                       {item.owner?.photoURL ? (
                         <img
-                          src={item.owner.photoURL}
+                          src={ownerPhotoUrls[item.owner._id] || item.owner.photoURL}
                           alt={item.owner.displayName}
                           style={{
                             width: 36,
@@ -351,6 +386,9 @@ const Marketplace = () => {
                       )}
                       <span style={{ color: 'var(--color-text-secondary)', fontSize: 14, fontWeight: 500, background: 'none', border: 'none', margin: 0, padding: 0 }}>
                         {item.owner?.displayName || 'Anonymous'}
+                        {item.owner?._id && (
+                          <UserRatingDisplay userId={item.owner._id} style={{ marginLeft: 8, fontSize: 13 }} showLabel={false} />
+                        )}
                       </span>
                     </div>
                     <div className="item-title tomato-style" style={{
@@ -374,18 +412,6 @@ const Marketplace = () => {
                          item.condition === 'Poor' ? '⚠️' : '❓'}{' '}
                         {item.condition || 'N/A'}
                       </span>
-                      {/* <span className={`tag tag-category ${item.category}`}>
-                        {item.category === 'furniture' ? '🛋️' :
-                         item.category === 'electronics' ? '💻' :
-                         item.category === 'books' ? '📚' :
-                         item.category === 'clothing' ? '👕' :
-                         item.category === 'sports-equipment' ? '🏀' :
-                         item.category === 'musical-instruments' ? '🎸' :
-                         item.category === 'tools' ? '🛠️' :
-                         item.category === 'art-supplies' ? '🎨' :
-                         item.category === 'other' ? '❔' : '❓'}{' '}
-                        {item.category || 'N/A'}
-                      </span> */}
                     </div>
                   </div>
                 </Link>
@@ -422,6 +448,8 @@ const Marketplace = () => {
           </div>
         </div>
       )}
+
+      <ItemDetailDialog open={itemDetailOpen} onClose={() => setItemDetailOpen(false)} itemId={selectedItemId} />
     </div>
   );
 };
