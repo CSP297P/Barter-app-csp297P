@@ -9,7 +9,10 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import ItemUpload from '../Items/ItemUpload';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import UserProfileDialog from '../../components/UserProfileDialog';
+import { UserRatingDisplay } from '../../components/UserProfileDialog';
 import './Messages.css';
+import { getUserItems, updateTradeSessionOfferedItems, getPublicUserProfile } from '../../services/mongodb';
+import ItemDetailDialog from '../Items/ItemDetailDialog';
 
 const Messages = () => {
   const navigate = useNavigate();
@@ -39,6 +42,14 @@ const Messages = () => {
   const [hasApprovedLocally, setHasApprovedLocally] = useState(false);
   const hasApprovedLocallyRef = useRef(false);
   const lastApprovedConversationIdRef = useRef(null);
+  const [addItemsDialogOpen, setAddItemsDialogOpen] = useState(false);
+  const [availableUserItems, setAvailableUserItems] = useState([]);
+  const [loadingUserItems, setLoadingUserItems] = useState(false);
+  const [selectedToAdd, setSelectedToAdd] = useState([]);
+  const [updatingOfferedItems, setUpdatingOfferedItems] = useState(false);
+  const [itemDetailOpen, setItemDetailOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState(null);
+  const [requesterProfile, setRequesterProfile] = useState(null);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -353,6 +364,52 @@ const Messages = () => {
     return () => unsub();
   }, [onTradeSessionStatusUpdated, selectedConversation]);
 
+  const handleToggleSelectItem = (itemId) => {
+    setSelectedToAdd(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
+  };
+
+  const handleAddSelectedItems = async () => {
+    setUpdatingOfferedItems(true);
+    try {
+      const newOfferedIds = [
+        ...((selectedConversation.offeredItems || []).map(i => i._id)),
+        ...selectedToAdd.filter(id => !(selectedConversation.offeredItems || []).some(i => i._id === id))
+      ];
+      const res = await updateTradeSessionOfferedItems(selectedConversation._id, newOfferedIds);
+      setSelectedConversation(prev => ({
+        ...prev,
+        offeredItems: res.offeredItems
+      }));
+      setAddItemsDialogOpen(false);
+      setSelectedToAdd([]);
+    } catch (err) {
+      alert('Failed to update offered items.');
+    } finally {
+      setUpdatingOfferedItems(false);
+    }
+  };
+
+  useEffect(() => {
+    if (addItemsDialogOpen && user && selectedConversation) {
+      setLoadingUserItems(true);
+      getUserItems(user._id).then(items => {
+        // Exclude already offered items
+        const offeredIds = (selectedConversation.offeredItems || []).map(i => i._id);
+        setAvailableUserItems(items.filter(i => !offeredIds.includes(i._id)));
+        setLoadingUserItems(false);
+      });
+    }
+  }, [addItemsDialogOpen, user, selectedConversation]);
+
+  useEffect(() => {
+    if (isRecipient && isPending && selectedConversation) {
+      const otherUser = selectedConversation.participants.find(p => p._id !== user._id);
+      if (otherUser?._id) {
+        getPublicUserProfile(otherUser._id).then(setRequesterProfile).catch(() => setRequesterProfile(null));
+      }
+    }
+  }, [isRecipient, isPending, selectedConversation, user._id]);
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -390,7 +447,7 @@ const Messages = () => {
                   className="conversation-preview"
                   onClick={() => handleSelectConversation(conv)}
                 >
-                  <div className="conversation-avatar" aria-label={`Avatar for ${otherUser?.displayName || 'User'}`}>{avatarLetter}</div>
+                  {/* <div className="conversation-avatar" aria-label={`Avatar for ${otherUser?.displayName || 'User'}`}>{avatarLetter}</div> */}
                   <div className="conversation-info">
                     <h3>{conv.item ? conv.item.title : 'Untitled Item'}</h3>
                     <p>with {otherUser?.displayName || 'User'}</p>
@@ -445,15 +502,27 @@ const Messages = () => {
       <div className="messages-panel modern-messages-panel">
         {selectedConversation ? (
           <>
-            <div className="messages-header modern-messages-header" style={{ position: 'relative' }}>
-              {selectedConversation
-                ? `Chat with ${selectedConversation.participants.find(p => p._id !== user._id)?.displayName || 'User'}`
-                : 'Chat'}
+            <div className="messages-header modern-messages-header header-relative">
+              {selectedConversation ? (
+                <>
+                  Chating with {(() => {
+                    const otherUser = selectedConversation.participants.find(p => p._id !== user._id);
+                    return (
+                      <>
+                        {otherUser?.displayName || 'User'}
+                        {otherUser?._id && (
+                          <UserRatingDisplay userId={otherUser._id} className="user-rating-display-inline" showLabel={false} />
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : 'Chat'}
               {/* Approve/Confirm Trade buttons absolutely positioned in top right */}
               {(isActive || tradeCompleted) && (
-                <span style={{ position: 'absolute', top: 8, right: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className="trade-approval-bar">
                   {tradeCompleted || Object.keys(tradeApproval).length === 2 ? (
-                    <span className="confirmed-message" style={{ color: '#388e3c', fontWeight: 500 }}>
+                    <span className="confirmed-message trade-confirmed-text">
                       Trade Confirmed
                     </span>
                   ) : (
@@ -464,7 +533,7 @@ const Messages = () => {
                         </Button>
                       )}
                       {tradeApproval[user._id] && Object.keys(tradeApproval).length < 2 && (
-                        <span style={{ color: '#888', fontWeight: 500, fontSize: '0.95em' }}>
+                        <span className="waiting-approval-text">
                           Waiting for approval from the other user.
                         </span>
                       )}
@@ -477,8 +546,56 @@ const Messages = () => {
               {isPending ? (
                 isRecipient ? (
                   <div className="chat-request-container">
-                    <div className="chat-request-message">
-                      This user wants to trade for your item. Accept or reject the request to start chatting.
+                    <div className="chat-request-message" style={{ marginBottom: 24 }}>
+                      <div className="trade-request-header">
+                        <div className="trade-request-avatar">
+                          {requesterProfile?.photoURL ? (
+                            <img src={requesterProfile.photoURL} alt={requesterProfile.displayName} />
+                          ) : (
+                            <span className="avatar-fallback">{requesterProfile?.displayName?.[0] || '?'}</span>
+                          )}
+                        </div>
+                        <div className="trade-request-userinfo">
+                          <span className="trade-request-username" onClick={() => setProfileDialogUserId(requesterProfile?._id)} style={{ cursor: 'pointer', color: '#6366f1', fontWeight: 700 }}>
+                            {requesterProfile?.displayName || 'User'}
+                          </span>
+                          <span className="trade-request-rating">
+                            <UserRatingDisplay userId={requesterProfile?._id} style={{ marginLeft: 8, fontSize: 18, verticalAlign: 'middle' }} showLabel={false} />
+                          </span>
+                          <span className="trade-request-trades" style={{ marginLeft: 12, color: '#a5b4fc', fontWeight: 500, fontSize: 14 }}>
+                            {requesterProfile?.totalSuccessfulTrades || 0} successful trades
+                          </span>
+                        </div>
+                      </div>
+                      {selectedConversation.tradeMessage && (
+                        <div className="trade-request-custom-message">
+                          <span style={{ color: '#6366f1', fontWeight: 600 }}>Message:</span> {selectedConversation.tradeMessage}
+                        </div>
+                      )}
+                      <div className="trade-request-items-row">
+                        <div className="trade-request-section">
+                          <div className="trade-request-section-title">Requested Item(s):</div>
+                          <div className="trade-items-row">
+                            {selectedConversation.item && (
+                              <div className="trade-item-card">
+                                <img src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl} alt={selectedConversation.item.title} className="trade-item-image" />
+                                <div className="trade-item-title">{selectedConversation.item.title}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="trade-request-section">
+                          <div className="trade-request-section-title">Offered Item(s):</div>
+                          <div className="trade-items-row">
+                            {selectedConversation.offeredItems && selectedConversation.offeredItems.map((item, idx) => (
+                              <div className="trade-item-card" key={item._id || idx}>
+                                <img src={item.imageUrls?.[0] || item.imageUrl} alt={item.title} className="trade-item-image" />
+                                <div className="trade-item-title">{item.title}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="chat-request-actions">
                       <button className="chat-request-btn accept" onClick={handleAcceptTrade}>Accept</button>
@@ -536,9 +653,9 @@ const Messages = () => {
                           key={msg._id}
                           className={`message-bubble modern-message-bubble ${isSent ? 'sent' : 'received'}`}
                         >
-                          {!isSent && (
+                          {/* {!isSent && (
                             <div className="bubble-avatar" aria-label={`Avatar for ${sender?.displayName || 'User'}`}>{senderAvatar}</div>
-                          )}
+                          )} */}
                           <div className="bubble-content">
                             {!isSent && (
                               <div className="message-sender-label">{sender?.displayName || 'User'}</div>
@@ -606,39 +723,83 @@ const Messages = () => {
             <div className="item-info">
               <h3>Requested Item</h3>
               {selectedConversation.item && (
-                <div className="trade-item-card">
-                  <img
-                    src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl}
-                    alt={selectedConversation.item.title}
-                    style={{ width: '100%', maxWidth: 180, maxHeight: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }}
-                  />
-                  <button
-                    className="view-item-button"
-                    onClick={() => navigate(`/item/${selectedConversation.item._id}`)}
-                  >
-                    View Item
-                  </button>
+                <div className="trade-items-row">
+                  <div className="trade-item-card">
+                    <img
+                      src={selectedConversation.item.imageUrls?.[0] || selectedConversation.item.imageUrl}
+                      alt={selectedConversation.item.title}
+                      className="trade-item-image"
+                    />
+                    <button
+                      className="view-item-button"
+                      onClick={() => {
+                        setSelectedItemId(selectedConversation.item._id);
+                        setItemDetailOpen(true);
+                      }}
+                    >
+                      View Item
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
             {selectedConversation.offeredItems && selectedConversation.offeredItems.length > 0 && (
               <div className="item-info">
-                <h3>Offered Item(s)</h3>
-                {selectedConversation.offeredItems.map((item, idx) => (
-                  <div className="trade-item-card" key={item._id || idx}>
-                    <img
-                      src={item.imageUrls?.[0] || item.imageUrl}
-                      alt={item.title}
-                      style={{ width: '100%', maxWidth: 180, maxHeight: 120, objectFit: 'cover', borderRadius: 10, marginBottom: 10 }}
-                    />
-                    <button
-                      className="view-item-button"
-                      onClick={() => navigate(`/item/${item._id}`)}
-                    >
-                      View Item
-                    </button>
-                  </div>
-                ))}
+                <div className="offered-items-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <h3 style={{ margin: 0 }}>Offered Item(s)</h3>
+                  <button
+                    className="add-more-items-btn"
+                    onClick={() => setAddItemsDialogOpen(true)}
+                  >
+                    Add More Items
+                  </button>
+                </div>
+                <div className="trade-items-row">
+                  {selectedConversation.offeredItems.map((item, idx) => (
+                    <div className="trade-item-card" key={item._id || idx}>
+                      <img
+                        src={item.imageUrls?.[0] || item.imageUrl}
+                        alt={item.title}
+                        className="trade-item-image"
+                      />
+                      <button
+                        className="view-item-button"
+                        onClick={() => {
+                          setSelectedItemId(item._id);
+                          setItemDetailOpen(true);
+                        }}
+                      >
+                        View Item
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {/* Add Items Dialog */}
+                <Dialog open={addItemsDialogOpen} onClose={() => setAddItemsDialogOpen(false)} maxWidth="sm" fullWidth>
+                  <DialogContent>
+                    <h3>Select items to add to your offer</h3>
+                    {loadingUserItems ? (
+                      <div>Loading your items...</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '12px' }}>
+                        {availableUserItems.length === 0 ? (
+                          <div>You have no more items to add.</div>
+                        ) : availableUserItems.map(item => (
+                          <div key={item._id} style={{ border: selectedToAdd.includes(item._id) ? '2px solid #6366f1' : '1px solid #ccc', borderRadius: '8px', padding: '8px', width: '120px', cursor: 'pointer', background: selectedToAdd.includes(item._id) ? '#e0e7ff' : '#fff' }} onClick={() => handleToggleSelectItem(item._id)}>
+                            <img src={item.imageUrls?.[0] || item.imageUrl} alt={item.title} style={{ width: '100%', height: '60px', objectFit: 'cover', borderRadius: '6px' }} />
+                            <div style={{ fontWeight: 600, fontSize: '0.95em', marginTop: '4px', textAlign: 'center' }}>{item.title}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop: '18px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                      <Button onClick={() => setAddItemsDialogOpen(false)} variant="outlined">Cancel</Button>
+                      <Button onClick={handleAddSelectedItems} variant="contained" disabled={selectedToAdd.length === 0 || updatingOfferedItems}>
+                        {updatingOfferedItems ? 'Adding...' : 'Add Selected'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </>
@@ -655,27 +816,16 @@ const Messages = () => {
         maxWidth="sm" 
         fullWidth
         PaperProps={{
-          style: {
-            borderRadius: '12px',
-            padding: '0',
-            maxHeight: '90vh',
-            position: 'relative'
-          }
+          className: 'upload-dialog-paper'
         }}
       >
         <IconButton
           onClick={() => setUploadDialogOpen(false)}
-          style={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            zIndex: 1,
-            color: '#666'
-          }}
+          className="upload-dialog-close-btn"
         >
           <CloseIcon />
         </IconButton>
-        <DialogContent style={{ padding: 0 }}>
+        <DialogContent className="upload-dialog-content">
           <ItemUpload onSuccess={() => setUploadDialogOpen(false)} />
         </DialogContent>
       </Dialog>
@@ -696,17 +846,19 @@ const Messages = () => {
 
       <Dialog open={showConfirmDialog} onClose={() => setShowConfirmDialog(false)}>
         <DialogContent>
-          <div style={{ padding: 16 }}>
+          <div className="trade-approve-dialog-content">
             <h3>{approvingUserName} has approved the trade. Do you also approve?</h3>
             <Button variant="contained" color="success" onClick={async () => { await handleApproveTrade(); setShowConfirmDialog(false); }}>
               Confirm
             </Button>
-            <Button variant="outlined" onClick={() => setShowConfirmDialog(false)} style={{ marginLeft: 8 }}>
+            <Button variant="outlined" onClick={() => setShowConfirmDialog(false)} className="trade-approve-cancel-btn">
               Cancel
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <ItemDetailDialog open={itemDetailOpen} onClose={() => setItemDetailOpen(false)} itemId={selectedItemId} />
     </div>
   );
 };

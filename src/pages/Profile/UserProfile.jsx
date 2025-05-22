@@ -5,12 +5,14 @@ import axios from 'axios';
 import ImageCarousel from '../../components/ImageCarousel';
 import EditItemDialog from '../../components/EditItemDialog';
 import ItemUpload from '../../pages/Items/ItemUpload';
-import { Dialog } from '@mui/material';
+import { Dialog, TextField, Button, IconButton, Avatar } from '@mui/material';
+import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import './UserProfile.css';
 import { useParams } from 'react-router-dom';
+import ImageEditor from '../../components/ImageEditor';
 
 const UserProfile = () => {
-  const { user } = useContext(AuthContext);
+  const { user, setUser } = useContext(AuthContext);
   const { userId } = useParams();
   const [items, setItems] = useState([]);
   const [profileUser, setProfileUser] = useState(null);
@@ -23,6 +25,14 @@ const UserProfile = () => {
   const [editItem, setEditItem] = useState(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [lastTried, setLastTried] = useState(Date.now());
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({ displayName: '', photo: null });
+  const [profileFormError, setProfileFormError] = useState('');
+  const [profileFormLoading, setProfileFormLoading] = useState(false);
+  const [imageEditorOpen, setImageEditorOpen] = useState(false);
+  const [imageToEdit, setImageToEdit] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,6 +47,7 @@ const UserProfile = () => {
         } else if (user) {
           // Viewing own profile
           setProfileUser(user);
+          setProfileForm({ displayName: user.displayName || '', photo: null });
           const data = await getUserItems(user._id);
           setItems(data);
         }
@@ -56,6 +67,24 @@ const UserProfile = () => {
     };
     fetchProfile();
   }, [userId, user, lastTried]);
+
+  useEffect(() => {
+    const fetchProfilePhotoUrl = async () => {
+      if (profileUser && profileUser.photoKey) {
+        try {
+          const res = await axios.get(`/users/${profileUser._id}/profile-photo-url`);
+          setProfilePhotoUrl(res.data.url);
+        } catch (err) {
+          setProfilePhotoUrl('');
+        }
+      } else if (profileUser && profileUser.photoURL) {
+        setProfilePhotoUrl(profileUser.photoURL);
+      } else {
+        setProfilePhotoUrl('');
+      }
+    };
+    fetchProfilePhotoUrl();
+  }, [profileUser]);
 
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
@@ -156,14 +185,20 @@ const UserProfile = () => {
       <div className="profile-header">
         {/* Profile Avatar */}
         <div className="profile-avatar">
-          {profileUser.photoURL ? (
-            <img src={profileUser.photoURL} alt={profileUser.displayName} />
+          {profilePhotoUrl ? (
+            <img src={profilePhotoUrl} alt={profileUser.displayName} />
           ) : (
             <span>
               {profileUser.displayName
                 ? profileUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase()
                 : <i className="fa fa-user" />}
             </span>
+          )}
+          {/* Gentle message if no profile picture and it's the user's own profile */}
+          {!profilePhotoUrl && !userId && (
+            <div className="gentle-profile-message">
+              You don't have a profile picture yet. Add one to personalize your profile!
+            </div>
           )}
         </div>
         <div className="profile-info">
@@ -174,6 +209,12 @@ const UserProfile = () => {
             <span className="profile-stat">✅ Successful Trades: {profileUser.totalSuccessfulTrades || 0}</span>
             <span className="profile-stat">📦 Listed Items: {profileUser.totalListedItems || items.length}</span>
           </div>
+          {/* Edit Profile button for own profile */}
+          {!userId && (
+            <Button variant="outlined" size="small" style={{marginTop:8}} onClick={() => setEditProfileOpen(true)}>
+              Edit Profile
+            </Button>
+          )}
         </div>
       </div>
 
@@ -326,8 +367,140 @@ const UserProfile = () => {
       />
 
       <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <ItemUpload onSuccess={() => setUploadDialogOpen(false)} />
+        <ItemUpload onSuccess={() => { setUploadDialogOpen(false); setLastTried(Date.now()); }} />
       </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editProfileOpen} onClose={() => setEditProfileOpen(false)} maxWidth="xs" fullWidth>
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h2>Edit Profile</h2>
+          <Avatar
+            src={
+              imagePreviewUrl ? imagePreviewUrl :
+              (profileForm.photo ? URL.createObjectURL(profileForm.photo) : (profileUser.photoURL || ''))
+            }
+            sx={{ width: 80, height: 80, mb: 2 }}
+          >
+            {(!imagePreviewUrl && !profileForm.photo && !profileUser.photoURL && profileUser.displayName) ? profileUser.displayName[0].toUpperCase() : null}
+          </Avatar>
+          {/* Re-adjust button for re-cropping the selected image */}
+          {(profileForm.photo || imagePreviewUrl) && (
+            <Button
+              size="small"
+              variant="outlined"
+              style={{ marginBottom: 8 }}
+              onClick={() => {
+                let previewUrl = imagePreviewUrl;
+                let fileToEdit = imageToEdit;
+                if (!previewUrl && profileForm.photo) {
+                  previewUrl = URL.createObjectURL(profileForm.photo);
+                }
+                if (profileForm.photo) {
+                  fileToEdit = profileForm.photo;
+                }
+                setImagePreviewUrl(previewUrl);
+                setImageToEdit(fileToEdit);
+                setImageEditorOpen(true);
+              }}
+            >
+              Re-adjust
+            </Button>
+          )}
+          <label htmlFor="profile-photo-upload">
+            <input
+              accept="image/*"
+              id="profile-photo-upload"
+              type="file"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    setImagePreviewUrl(ev.target.result);
+                    setImageToEdit(file);
+                    setImageEditorOpen(true);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            <IconButton color="primary" aria-label="upload picture" component="span">
+              <PhotoCamera />
+            </IconButton>
+            <span style={{ fontSize: 12, color: '#888' }}>
+              {profileForm.photo ? (profileForm.photo.name || 'Cropped Image') : 'Change profile picture'}
+            </span>
+          </label>
+          <TextField
+            label="Display Name"
+            value={profileForm.displayName}
+            onChange={e => setProfileForm(f => ({ ...f, displayName: e.target.value }))}
+            fullWidth
+            margin="normal"
+          />
+          {profileFormError && <div style={{ color: 'red', marginBottom: 8 }}>{profileFormError}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <Button onClick={() => setEditProfileOpen(false)} disabled={profileFormLoading}>Cancel</Button>
+            <Button variant="contained" color="primary" disabled={profileFormLoading} onClick={async () => {
+              setProfileFormError('');
+              setProfileFormLoading(true);
+              try {
+                const formData = new FormData();
+                formData.append('displayName', profileForm.displayName);
+                if (profileForm.photo) {
+                  formData.append('photo', profileForm.photo);
+                }
+                const response = await axios.put(
+                  `/users/${user._id}/profile`,
+                  formData,
+                  {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                    withCredentials: true
+                  }
+                );
+                if (response.data) {
+                  setProfileUser(response.data);
+                  if (setUser) setUser(response.data);
+                  setEditProfileOpen(false);
+                  setLastTried(Date.now()); // refresh items/profile
+                }
+              } catch (err) {
+                setProfileFormError(err.response?.data?.message || 'Failed to update profile');
+              } finally {
+                setProfileFormLoading(false);
+              }
+            }}>
+              Save
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {imageEditorOpen && imagePreviewUrl && (
+        <Dialog open={imageEditorOpen} onClose={() => setImageEditorOpen(false)} maxWidth="sm" fullWidth>
+          <ImageEditor
+            image={imagePreviewUrl}
+            onSave={blob => {
+              // Convert blob to File for upload
+              const croppedFile = new File(
+                [blob],
+                (imageToEdit && imageToEdit.name) ? imageToEdit.name : 'cropped.jpg',
+                { type: 'image/jpeg' }
+              );
+              setProfileForm(f => ({ ...f, photo: croppedFile }));
+              setImageEditorOpen(false);
+              setImageToEdit(null);
+              setImagePreviewUrl(null);
+            }}
+            onCancel={() => {
+              setImageEditorOpen(false);
+              setImageToEdit(null);
+              setImagePreviewUrl(null);
+            }}
+          />
+        </Dialog>
+      )}
     </div>
   );
 };

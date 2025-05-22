@@ -818,4 +818,142 @@
   .item-image-container.tomato-style {
     height: 160px;
   }
+}
+
+/* DARK MODE for Item Detail Page */
+.dark .item-detail {
+  background: #181a24 !important;
+  border: none !important;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.28) !important;
+}
+.dark .item-detail-container {
+  background: #232946 !important;
+  border-radius: 24px !important;
+  box-shadow: 0 4px 24px 0 rgba(24,28,36,0.18) !important;
+}
+.dark .item-info {
+  color: #e0e7ff !important;
+}
+.dark .item-info h1 {
+  color: #bfc7ff !important;
+  text-shadow: none !important;
+}
+.dark .item-info .item-price {
+  color: #a5b4fc !important;
+}
+.dark .item-tags.tomato-style {
+  background: transparent !important;
+}
+.dark .tag {
+  background: #232946 !important;
+  color: #a5b4fc !important;
+  border: 1.5px solid #373b69 !important;
+}
+.dark .tag-type.barter {
+  background: #6366f1 !important;
+  color: #fff !important;
+}
+.dark .tag-type.giveaway {
+  background: #43e97b !important;
+  color: #fff !important;
+}
+.dark .tag-condition.new {
+  background: #388e3c !important;
+  color: #fff !important;
+}
+.dark .tag-condition.like-new {
+  background: #7b1fa2 !important;
+  color: #fff !important;
+}
+.dark .tag-condition.good {
+  background: #1976d2 !important;
+  color: #fff !important;
+}
+.dark .tag-condition.fair {
+  background: #fbc02d !important;
+  color: #232946 !important;
+}
+.dark .tag-condition.poor {
+  background: #c62828 !important;
+  color: #fff !important;
+}
+.dark .tag-category.books {
+  background: #f57c00 !important;
+  color: #fff !important;
+}
+.dark .item-meta {
+  background: #232946 !important;
+  color: #a5b4fc !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(30, 32, 48, 0.18) !important;
+}
+.dark .condition, .dark .status {
+  color: #43e97b !important;
+}
+.dark .owner-info {
+  color: #a5b4fc !important;
+  border-top: 1px solid #373b69 !important;
+}
+.dark .back-button {
+  background: #232946 !important;
+  color: #a5b4fc !important;
+  border: none !important;
+}
+.dark .back-button:hover {
+  background: #6366f1 !important;
+  color: #fff !important;
+}
+.dark .item-image .carousel-container, .dark .item-image img {
+  background: #232946 !important;
+  box-shadow: 0 4px 24px 0 rgba(66,133,244,0.10) !important;
+}
+.dark .carousel-button,
+.dark .next-button,
+.dark .prev-button {
+  background: #232946 !important;
+  color: #fff !important;
+  border: 2px solid #a5b4fc !important;
+  box-shadow: 0 2px 8px rgba(66,133,244,0.18) !important;
+  opacity: 0.95 !important;
+}
+.dark .carousel-button:hover,
+.dark .next-button:hover,
+.dark .prev-button:hover {
+  background: #6366f1 !important;
+  color: #fff !important;
+  border-color: #bfc7ff !important;
+}
+
+.carousel-button,
+.next-button,
+.prev-button {
+  background: #fff !important;
+  color: #232946 !important;
+  border: 2px solid #c7d2fe !important;
+  box-shadow: 0 2px 8px rgba(66,133,244,0.10) !important;
+  opacity: 0.95 !important;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.carousel-button:hover,
+.next-button:hover,
+.prev-button:hover {
+  background: #6366f1 !important;
+  color: #fff !important;
+  border-color: #6366f1 !important;
+}
+
+.carousel-container button,
+.carousel-container .carousel-button,
+.carousel-container .next-button,
+.carousel-container .prev-button {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.25s;
+}
+.carousel-container:hover button,
+.carousel-container:hover .carousel-button,
+.carousel-container:hover .next-button,
+.carousel-container:hover .prev-button {
+  opacity: 1 !important;
+  pointer-events: auto !important;
 } 
