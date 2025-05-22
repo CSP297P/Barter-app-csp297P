@@ -19,6 +19,9 @@ const initializeSocketService = (io) => {
   });
 
   io.on('connection', (socket) => {
+    // Join user-specific room for real-time trade session updates
+    socket.join(`user_${socket.userId}`);
+
     // Join trade session room
     socket.on('join_trade_session', async ({ sessionId }) => {
       try {
@@ -70,9 +73,15 @@ const initializeSocketService = (io) => {
           read: false
         });
 
-        // Emit message to all participants in the room
+        // Populate sender's displayName
+        await message.populate('senderId', 'displayName');
+
+        // Emit message to all participants in the room, including senderName
         const roomId = `trade_session_${sessionId}`;
-        io.to(roomId).emit('message_received', message);
+        io.to(roomId).emit('message_received', {
+          ...message.toObject(),
+          senderName: message.senderId.displayName
+        });
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
@@ -83,6 +92,16 @@ const initializeSocketService = (io) => {
     socket.on('disconnect', () => {
       // Clean up if needed
     });
+
+    // Broadcast trade approved (already handled in route, but keep for clarity)
+    // socket.on('approve_trade', async ({ sessionId, userId }) => {
+    //   io.to(`trade_session_${sessionId}`).emit('trade_approved', { sessionId, userId });
+    // });
+
+    // Broadcast trade completed (already handled in route, but keep for clarity)
+    // socket.on('confirm_trade', async ({ sessionId }) => {
+    //   io.to(`trade_session_${sessionId}`).emit('trade_completed', { sessionId });
+    // });
   });
 
   return io;

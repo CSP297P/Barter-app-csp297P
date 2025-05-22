@@ -102,6 +102,7 @@ function AppWithSocket({ theme, toggleTheme }) {
               <Route path="/item/:id" element={<ItemDetail />} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><ItemUpload /></ProtectedRoute>} />
               <Route path="/edit/:id" element={<ProtectedRoute><EditItem /></ProtectedRoute>} />
             </Routes>

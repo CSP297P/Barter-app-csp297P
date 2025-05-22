@@ -19,6 +19,7 @@ const Marketplace = () => {
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedTypes, setSelectedTypes] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
 
   const categoryOptions = [
     { value: 'gaming-console', label: 'Gaming Console' },
@@ -37,6 +38,8 @@ const Marketplace = () => {
     { value: 'barter', label: 'Barter' },
     { value: 'giveaway', label: 'Giveaway' }
   ];
+
+  const priceMarks = [0, 50, 100, 250, 500, 1000];
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -102,12 +105,36 @@ const Marketplace = () => {
     });
   };
 
+  const handlePriceChange = (e, idx) => {
+    const value = Number(e.target.value);
+    setPriceRange(prev => {
+      const newRange = [...prev];
+      newRange[idx] = value;
+      // Ensure min <= max
+      if (newRange[0] > newRange[1]) {
+        if (idx === 0) newRange[1] = value;
+        else newRange[0] = value;
+      }
+      return newRange;
+    });
+  };
+
+  const priceRangeMatch = (itemRange, selectedRange) => {
+    if (!itemRange) return false;
+    if (itemRange === '1000+') return selectedRange[1] >= 1000;
+    const [itemMin, itemMax] = itemRange.split('-').map(Number);
+    if (isNaN(itemMin) || isNaN(itemMax)) return false;
+    // Overlap: itemMax >= selectedMin && itemMin <= selectedMax
+    return itemMax >= selectedRange[0] && itemMin <= selectedRange[1];
+  };
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
     const matchesType = selectedTypes.length === 0 || selectedTypes.includes(item.type);
-    return matchesSearch && matchesCategory && matchesType;
+    const matchesPrice = priceRangeMatch(item.priceRange, priceRange);
+    return matchesSearch && matchesCategory && matchesType && matchesPrice;
   });
 
   const handleUploadSuccess = (newItem) => {
@@ -192,6 +219,41 @@ const Marketplace = () => {
                   {type.label}
                 </label>
               ))}
+            </div>
+          </div>
+
+          <div className="filter-section">
+            <h3>Price</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ minWidth: 32, fontSize: 13, color: '#888', marginRight: 4 }}>Min</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1000}
+                  step={1}
+                  value={priceRange[0]}
+                  onChange={e => handlePriceChange(e, 0)}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: 40, fontSize: 13 }}>${priceRange[0]}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ minWidth: 32, fontSize: 13, color: '#888', marginRight: 4 }}>Max</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1000}
+                  step={1}
+                  value={priceRange[1]}
+                  onChange={e => handlePriceChange(e, 1)}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ minWidth: 40, fontSize: 13 }}>{priceRange[1] === 1000 ? '$1000+' : `$${priceRange[1]}`}</span>
+              </div>
+              <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+                Selected: ${priceRange[0]} - {priceRange[1] === 1000 ? '$1000+' : `$${priceRange[1]}`}
+              </div>
             </div>
           </div>
         </div>
@@ -291,14 +353,19 @@ const Marketplace = () => {
                         {item.owner?.displayName || 'Anonymous'}
                       </span>
                     </div>
-                    <div className="item-title tomato-style">{item.title}</div>
-                    <div className="item-price tomato-style">{formatPriceRange(item.priceRange)}</div>
-                    <div className="item-description tomato-style">{item.description}</div>
+                    <div className="item-title tomato-style" style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>{item.title}</div>
+                    {/* <div className="item-price tomato-style">{formatPriceRange(item.priceRange)}</div>
+                    <div className="item-description tomato-style">{item.description}</div> */}
                     <div className="item-tags tomato-style">
+                      {item.type === 'giveaway' && (
                       <span className={`tag tag-type ${item.type}`}>
-                        {item.type === 'barter' ? '🤝' : item.type === 'giveaway' ? '🎁' : '❓'}{' '}
-                        {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'N/A'}
+                          🎁 Giveaway
                       </span>
+                      )}
                       <span className={`tag tag-condition ${item.condition?.toLowerCase().replace(/\s/g, '-')}`}> 
                         {item.condition === 'New' ? '🆕' :
                          item.condition === 'Like New' ? '✨' :
@@ -307,7 +374,7 @@ const Marketplace = () => {
                          item.condition === 'Poor' ? '⚠️' : '❓'}{' '}
                         {item.condition || 'N/A'}
                       </span>
-                      <span className={`tag tag-category ${item.category}`}>
+                      {/* <span className={`tag tag-category ${item.category}`}>
                         {item.category === 'furniture' ? '🛋️' :
                          item.category === 'electronics' ? '💻' :
                          item.category === 'books' ? '📚' :
@@ -318,7 +385,7 @@ const Marketplace = () => {
                          item.category === 'art-supplies' ? '🎨' :
                          item.category === 'other' ? '❔' : '❓'}{' '}
                         {item.category || 'N/A'}
-                      </span>
+                      </span> */}
                     </div>
                   </div>
                 </Link>

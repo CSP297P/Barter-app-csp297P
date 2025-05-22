@@ -46,6 +46,16 @@ const tradeSessionSchema = new mongoose.Schema({
   isChatActive: { 
     type: Boolean, 
     default: true 
+  },
+  approvals: {
+    type: Map,
+    of: Boolean,
+    default: {}
+  },
+  confirmations: {
+    type: Map,
+    of: Boolean,
+    default: {}
   }
 }, { 
   timestamps: true 
