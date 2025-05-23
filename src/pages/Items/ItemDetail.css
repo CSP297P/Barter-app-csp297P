@@ -956,4 +956,28 @@
 .carousel-container:hover .prev-button {
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+.whisper-message-toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #6366f1;
+  color: #fff;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  z-index: 2000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  opacity: 0;
+  animation: fadeInOutWhisper 4s linear;
+  pointer-events: none;
+}
+@keyframes fadeInOutWhisper {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
 } 

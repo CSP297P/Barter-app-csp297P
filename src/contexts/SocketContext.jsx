@@ -62,7 +62,8 @@ export const SocketProvider = ({ children, user }) => {
     onTradeCompleted: socketService.onTradeCompleted.bind(socketService),
     onNewTradeSession: socketService.onNewTradeSession.bind(socketService),
     onTradeSessionDeleted: socketService.onTradeSessionDeleted.bind(socketService),
-    onTradeSessionStatusUpdated: socketService.onTradeSessionStatusUpdated.bind(socketService)
+    onTradeSessionStatusUpdated: socketService.onTradeSessionStatusUpdated.bind(socketService),
+    onTradeSessionItemsUpdated: socketService.onTradeSessionItemsUpdated.bind(socketService)
   };
 
   return (
