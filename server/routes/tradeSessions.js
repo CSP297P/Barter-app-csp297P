@@ -11,10 +11,7 @@ router.get('/user', auth, async (req, res) => {
       participants: req.user.userId
     })
     .populate('participants', 'displayName')
-    .populate({
-      path: 'itemIds',
-      options: { limit: 1 }
-    })
+    .populate('itemIds')
     .populate('offeredItemIds')
     .sort('-createdAt');
 
@@ -39,10 +36,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const session = await TradeSession.findById(req.params.id)
       .populate('participants', 'displayName')
-      .populate({
-        path: 'itemIds',
-        options: { limit: 1 }
-      })
+      .populate('itemIds')
       .populate('offeredItemIds');
 
     if (!session) {
@@ -120,10 +114,7 @@ router.post('/', auth, async (req, res) => {
     
     // Populate the session with user and item details
     await session.populate('participants', 'displayName');
-    await session.populate({
-      path: 'itemIds',
-      options: { limit: 1 }
-    });
+    await session.populate('itemIds');
     await session.populate('offeredItemIds');
 
     // Transform the data to match the client's expectations
@@ -182,10 +173,7 @@ router.put('/:id/status', auth, async (req, res) => {
 
     // Populate and transform the session before sending
     await session.populate('participants', 'displayName');
-    await session.populate({
-      path: 'itemIds',
-      options: { limit: 1 }
-    });
+    await session.populate('itemIds');
 
     const transformedSession = {
       ...session.toObject(),
@@ -234,12 +222,53 @@ router.put('/:id/offered-items', auth, async (req, res) => {
     session.offeredItemIds = offeredItemIds;
     await session.save();
     await session.populate('offeredItemIds');
+    // Emit socket event to both participants
+    const io = req.app.get('io');
+    session.participants.forEach(participant => {
+      io.to(`user_${participant._id}`).emit('trade_session_items_updated', {
+        sessionId: session._id,
+        offeredItems: session.offeredItemIds
+      });
+    });
     res.json({
-      offeredItems: session.offeredItemIds
+      offeredItems: session.offeredItemIds // populated objects
     });
   } catch (error) {
     console.error('Error updating offered items:', error);
     res.status(500).json({ message: 'Error updating offered items' });
+  }
+});
+
+// Update requested items for a trade session
+router.put('/:id/requested-items', auth, async (req, res) => {
+  try {
+    const { itemIds } = req.body;
+    const session = await TradeSession.findById(req.params.id);
+    if (!session) {
+      return res.status(404).json({ message: 'Trade session not found' });
+    }
+    // Check if user is a participant (fix: compare as string)
+    if (!session.participants.some(p => p.toString() === req.user.userId)) {
+      return res.status(403).json({ message: 'Not authorized to update this trade session' });
+    }
+    // Update itemIds
+    session.itemIds = itemIds;
+    await session.save();
+    await session.populate('itemIds');
+    // Emit socket event to both participants
+    const io = req.app.get('io');
+    session.participants.forEach(participant => {
+      io.to(`user_${participant._id}`).emit('trade_session_items_updated', {
+        sessionId: session._id,
+        requestedItems: session.itemIds
+      });
+    });
+    res.json({
+      requestedItems: session.itemIds // populated objects
+    });
+  } catch (error) {
+    console.error('Error updating requested items:', error);
+    res.status(500).json({ message: 'Error updating requested items' });
   }
 });
 
@@ -301,10 +330,7 @@ router.post('/:id/approve', auth, async (req, res) => {
       });
       // Emit trade_session_status_updated to both participants
       await session.populate('participants', 'displayName');
-      await session.populate({
-        path: 'itemIds',
-        options: { limit: 1 }
-      });
+      await session.populate('itemIds');
       const transformedSession = {
         ...session.toObject(),
         item: session.itemIds[0]

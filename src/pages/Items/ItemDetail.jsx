@@ -42,6 +42,7 @@ const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
   const [loadingUserItems, setLoadingUserItems] = useState(false);
   const [initialTradeMessage, setInitialTradeMessage] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [whisperMessage, setWhisperMessage] = useState('');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -188,7 +189,7 @@ const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
     }
   };
 
-  const handleTradeRequest = () => {
+  const handleTradeRequest = async () => {
     if (!user) {
       navigate('/login');
       return;
@@ -196,7 +197,21 @@ const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
     if (item.type === 'barter') {
       setShowTradeDialog(true);
     } else {
+      // For giveaway, check if a trade session already exists
+      try {
+        const res = await axios.get(`/trade-sessions/user?itemId=${item._id}`);
+        const existing = Array.isArray(res.data) ? res.data.find(s => s.item && s.item._id === item._id) : null;
+        if (existing) {
+          setWhisperMessage('Trade has already been requested. Please check conversations for updates.');
+          setTimeout(() => setWhisperMessage(''), 4000);
+          return;
+        }
+      } catch (err) {
+        // fallback: allow request if error
+      }
       handleStartChat();
+      setWhisperMessage('You have requested this giveaway. The owner has received your request.');
+      setTimeout(() => setWhisperMessage(''), 4000);
     }
   };
 
@@ -443,6 +458,11 @@ const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
           }
         }} />
       </Dialog>
+
+      {/* Whisper message notification */}
+      {whisperMessage && (
+        <div className="whisper-message-toast">{whisperMessage}</div>
+      )}
     </div>
   );
 };

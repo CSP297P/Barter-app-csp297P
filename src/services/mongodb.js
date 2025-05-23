@@ -122,4 +122,9 @@ export const rateUser = async (userId, rating) => {
 export const updateTradeSessionOfferedItems = async (sessionId, offeredItemIds) => {
   const response = await axios.put(`/trade-sessions/${sessionId}/offered-items`, { offeredItemIds });
   return response.data;
+};
+
+export const updateTradeSessionRequestedItems = async (sessionId, itemIds) => {
+  const response = await axios.put(`/trade-sessions/${sessionId}/requested-items`, { itemIds });
+  return response.data;
 }; 

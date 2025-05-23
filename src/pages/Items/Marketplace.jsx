@@ -67,7 +67,8 @@ const Marketplace = () => {
           owner: {
             _id: item.owner?._id || item.ownerId,
             displayName: item.ownerName || item.owner?.displayName || 'Anonymous',
-            photoURL: item.owner?.photoURL
+            photoURL: item.owner?.photoURL,
+            photoKey: item.owner?.photoKey // include photoKey for S3 avatar
           }
         }));
         console.log('Processed items:', processedItems);
@@ -179,8 +180,32 @@ const Marketplace = () => {
     return matchesSearch && matchesCategory && matchesType && matchesPrice;
   });
 
+  // Helper: Interleave items from different users to avoid consecutive items from the same user
+  function interleaveByOwner(items) {
+    const ownerMap = new Map();
+    items.forEach(item => {
+      const ownerId = item.owner?._id || 'unknown';
+      if (!ownerMap.has(ownerId)) ownerMap.set(ownerId, []);
+      ownerMap.get(ownerId).push(item);
+    });
+    const ownerQueues = Array.from(ownerMap.values());
+    const result = [];
+    let added = true;
+    while (added) {
+      added = false;
+      for (let queue of ownerQueues) {
+        if (queue.length > 0) {
+          result.push(queue.shift());
+          added = true;
+        }
+      }
+    }
+    return result;
+  }
+
   // Only show up to visibleCount items
-  const visibleItems = filteredItems.slice(0, visibleCount);
+  const interleavedItems = interleaveByOwner(filteredItems);
+  const visibleItems = interleavedItems.slice(0, visibleCount);
 
   const handleUploadSuccess = (newItem) => {
     // Ensure the new item has the correct owner structure
@@ -388,9 +413,9 @@ const Marketplace = () => {
                   <div className="item-info tomato-style">
                     {/* Owner Avatar */}
                     <div className="item-owner-avatar" style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                      {item.owner?.photoURL ? (
+                      {ownerPhotoUrls[item.owner._id] ? (
                         <img
-                          src={ownerPhotoUrls[item.owner._id] || item.owner.photoURL}
+                          src={ownerPhotoUrls[item.owner._id]}
                           alt={item.owner.displayName}
                           style={{
                             width: 36,

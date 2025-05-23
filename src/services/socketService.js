@@ -13,6 +13,7 @@ class SocketService {
     this.tradeSessionStatusUpdatedHandlers = new Set();
     this.tradeRequestedHandlers = new Set();
     this.tradeRequestAcceptedHandlers = new Set();
+    this.tradeSessionItemsUpdatedHandlers = new Set();
   }
 
   connect() {
@@ -64,6 +65,10 @@ class SocketService {
 
     this.socket.on('trade_request_accepted', (data) => {
       this.tradeRequestAcceptedHandlers.forEach(handler => handler(data));
+    });
+
+    this.socket.on('trade_session_items_updated', (data) => {
+      this.tradeSessionItemsUpdatedHandlers.forEach(handler => handler(data));
     });
 
     this.socket.on('error', (error) => {
@@ -176,6 +181,11 @@ class SocketService {
   onTradeRequestAccepted(handler) {
     this.tradeRequestAcceptedHandlers.add(handler);
     return () => this.tradeRequestAcceptedHandlers.delete(handler);
+  }
+
+  onTradeSessionItemsUpdated(handler) {
+    this.tradeSessionItemsUpdatedHandlers.add(handler);
+    return () => this.tradeSessionItemsUpdatedHandlers.delete(handler);
   }
 }
 

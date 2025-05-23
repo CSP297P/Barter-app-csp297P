@@ -257,6 +257,7 @@ html, body, #root, .App {
   background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
   border-radius: 0;
   box-sizing: border-box;
+  align-items: center;
 }
 
 .message-bubble {
@@ -579,22 +580,23 @@ html, body, #root, .App {
 
 .trade-items-row {
   gap: 6px;
+  max-width: 300px;
+  max-height: 300px;
   padding-bottom: 0;
   margin-bottom: 0;
-  max-height: 100px;
 }
 
 .trade-item-card {
-  height: 130px;
-  max-height: 130px;
-  min-height: 130px;
-  margin-right: 6px;
+  border: 1px solid #e0e7ff;
+  /* max-height: 430px; */
+  /* min-height: 130px; */
+  margin-right: 2px;
   margin-bottom: 0;
-  padding-bottom: 5px;
+  padding-bottom: 1px;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: flex-start;
+  /* flex-direction: column; */
+  /* justify-content: flex-start; */
+  align-items: center;
 }
 
 .trade-item-card img {
@@ -606,6 +608,7 @@ html, body, #root, .App {
   margin-bottom: 2px;
 }
 
+.remove-item-button, 
 .view-item-button,
 .add-more-items-btn {
   background: linear-gradient(90deg, #6366f1 0%, #60a5fa 100%);
@@ -613,7 +616,7 @@ html, body, #root, .App {
   font-weight: 700;
   font-size: 1rem;
   border: none;
-  border-radius: 999px;
+  border-radius: 5px;
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.13);
   cursor: pointer;
   transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s;
@@ -708,7 +711,7 @@ html, body, #root, .App {
 .trade-item-image {
   width: 100%;
   max-width: 180px;
-  max-height: 120px;
+  max-height: 180px;
   object-fit: cover;
   border-radius: 10px;
   margin-bottom: 10px;
@@ -916,6 +919,7 @@ html, body, #root, .App {
   display: flex;
   gap: 16px;
   margin-top: 18px;
+  align-items: center;
 }
 .accept-btn, .reject-btn {
   padding: 12px 36px;
@@ -950,4 +954,25 @@ html, body, #root, .App {
   transform: scale(1.07) translateY(-2px);
   box-shadow: 0 8px 32px rgba(255, 88, 88, 0.18);
   border-color: #ff585899;
+}
+
+.item-update-toast {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #6366f1;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  animation: fadeInOut 3s linear;
+}
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
 } 
