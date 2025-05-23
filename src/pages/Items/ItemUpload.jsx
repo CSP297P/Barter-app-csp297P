@@ -103,18 +103,18 @@ const ItemUpload = ({ onSuccess }) => {
   };
 
   return (
-    <div className="item-upload" style={{ background: '#f8fafc', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,60,0.18)', padding: '32px 24px 24px 24px', maxWidth: 540, margin: '0 auto' }}>
-      <h2 style={{ fontWeight: 700, fontSize: 24, letterSpacing: 0.5, marginBottom: 0 }}>Upload New Item</h2>
-      <Divider style={{ margin: '18px 0 24px 0' }} />
-      {error && <div className="error-message" style={{ marginBottom: 18 }}>{error}</div>}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="item-upload item-upload-custom">
+      <h2 className="item-upload-title">Upload New Item</h2>
+      <Divider className="item-upload-divider" />
+      {error && <div className="error-message item-upload-error">{error}</div>}
+      <form onSubmit={handleSubmit} className="item-upload-form">
         <TextField
           label="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
           fullWidth
-          InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+          InputProps={{ className: 'item-upload-input' }}
         />
         <TextField
           label="Description"
@@ -124,9 +124,9 @@ const ItemUpload = ({ onSuccess }) => {
           fullWidth
           multiline
           rows={3}
-          InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+          InputProps={{ className: 'item-upload-input' }}
         />
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="item-upload-form-row">
           <TextField
             label="Type"
             value={type}
@@ -134,7 +134,7 @@ const ItemUpload = ({ onSuccess }) => {
             required
             select
             fullWidth
-            InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+            InputProps={{ className: 'item-upload-input' }}
           >
             <MenuItem value="barter">Barter</MenuItem>
             <MenuItem value="giveaway">Giveaway</MenuItem>
@@ -146,7 +146,7 @@ const ItemUpload = ({ onSuccess }) => {
             required
             select
             fullWidth
-            InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+            InputProps={{ className: 'item-upload-input' }}
           >
             <MenuItem value="">Select Category</MenuItem>
             <MenuItem value="gaming-console">Gaming Console</MenuItem>
@@ -161,7 +161,7 @@ const ItemUpload = ({ onSuccess }) => {
             <MenuItem value="other">Other</MenuItem>
           </TextField>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="item-upload-form-row">
           <TextField
             label="Condition"
             value={condition}
@@ -169,7 +169,7 @@ const ItemUpload = ({ onSuccess }) => {
             required
             select
             fullWidth
-            InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+            InputProps={{ className: 'item-upload-input' }}
           >
             <MenuItem value="">Select Condition</MenuItem>
             <MenuItem value="New">New</MenuItem>
@@ -185,7 +185,7 @@ const ItemUpload = ({ onSuccess }) => {
             required
             select
             fullWidth
-            InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
+            InputProps={{ className: 'item-upload-input' }}
           >
             <MenuItem value="">Select Value Range</MenuItem>
             <MenuItem value="0-50">$0 - $50</MenuItem>
@@ -196,26 +196,26 @@ const ItemUpload = ({ onSuccess }) => {
             <MenuItem value="1000+">$1000+</MenuItem>
           </TextField>
         </div>
-        <Divider style={{ margin: '18px 0 8px 0' }} />
-        <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(60,60,60,0.07)', padding: 18 }}>
-          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8, color: '#1976d2', letterSpacing: 0.2 }}>Images</div>
-          <div style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>Upload images for your item. You can rearrange or remove them after upload.</div>
+        <Divider className="item-upload-divider item-upload-divider-small" />
+        <div className="item-upload-section">
+          <div className="item-upload-section-title">Images</div>
+          <div className="item-upload-section-desc">Upload images for your item. You can rearrange or remove them after upload.</div>
           <ImageUploader
             onUploadComplete={handleImageUploadComplete}
             maxFiles={10}
           />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 18 }}>
+        <div className="item-upload-actions">
           <Button
             onClick={handleCancel}
-            style={{ color: '#888', fontWeight: 500, fontSize: 16, borderRadius: 8, padding: '8px 20px' }}
+            className="item-upload-cancel-btn"
           >Cancel</Button>
           <Button
             type="submit"
             variant="contained"
             color="primary"
             disabled={loading}
-            style={{ fontWeight: 600, fontSize: 16, borderRadius: 8, padding: '8px 28px', boxShadow: '0 2px 8px rgba(60,60,60,0.10)' }}
+            className="item-upload-submit-btn"
           >{loading ? 'Uploading...' : 'Upload Item'}</Button>
         </div>
       </form>

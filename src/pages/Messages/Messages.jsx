@@ -505,7 +505,7 @@ const Messages = () => {
             <div className="messages-header modern-messages-header header-relative">
               {selectedConversation ? (
                 <>
-                  Chating with {(() => {
+                  Chatting with {(() => {
                     const otherUser = selectedConversation.participants.find(p => p._id !== user._id);
                     return (
                       <>
