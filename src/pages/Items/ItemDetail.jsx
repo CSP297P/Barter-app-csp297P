@@ -8,6 +8,7 @@ import './ItemDetail.css';
 import ItemUpload from './ItemUpload';
 import { Dialog } from '@mui/material';
 import CardCarousel from '../../components/CardCarousel';
+import { UserRatingDisplay } from '../../components/UserProfileDialog';
 
 const formatPriceRange = (range) => {
   if (!range) return 'N/A';
@@ -19,12 +20,13 @@ const formatPriceRange = (range) => {
   return `$${range}`;
 };
 
-const ItemDetail = () => {
-  const { id } = useParams();
+const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
+  const params = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const { joinTradeSession, sendMessage, isConnected, onMessage } = useSocket();
   
+  const id = propItemId || params.id;
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,6 +42,7 @@ const ItemDetail = () => {
   const [loadingUserItems, setLoadingUserItems] = useState(false);
   const [initialTradeMessage, setInitialTradeMessage] = useState('');
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [whisperMessage, setWhisperMessage] = useState('');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,7 +189,7 @@ const ItemDetail = () => {
     }
   };
 
-  const handleTradeRequest = () => {
+  const handleTradeRequest = async () => {
     if (!user) {
       navigate('/login');
       return;
@@ -194,7 +197,21 @@ const ItemDetail = () => {
     if (item.type === 'barter') {
       setShowTradeDialog(true);
     } else {
+      // For giveaway, check if a trade session already exists
+      try {
+        const res = await axios.get(`/trade-sessions/user?itemId=${item._id}`);
+        const existing = Array.isArray(res.data) ? res.data.find(s => s.item && s.item._id === item._id) : null;
+        if (existing) {
+          setWhisperMessage('Trade has already been requested. Please check conversations for updates.');
+          setTimeout(() => setWhisperMessage(''), 4000);
+          return;
+        }
+      } catch (err) {
+        // fallback: allow request if error
+      }
       handleStartChat();
+      setWhisperMessage('You have requested this giveaway. The owner has received your request.');
+      setTimeout(() => setWhisperMessage(''), 4000);
     }
   };
 
@@ -234,9 +251,16 @@ const ItemDetail = () => {
 
   return (
     <div className="item-detail">
-      <button className="back-button" onClick={() => navigate(-1)} aria-label="Go back">
-        ←
-      </button>
+      {/* Show back button only if not in dialog */}
+      {!isDialog ? (
+        <button className="back-button" onClick={() => navigate(-1)} aria-label="Go back">
+          ←
+        </button>
+      ) : (
+        <button className="back-button" onClick={onClose} aria-label="Close dialog">
+          ×
+        </button>
+      )}
       <div className="item-detail-container">
         <div className="item-image">
           <ImageCarousel images={getImageUrls(item)} />
@@ -279,7 +303,11 @@ const ItemDetail = () => {
           </div>
           <div className="owner-info">
             <div>
-              <p>Posted by: {item.owner.displayName || item.owner.username || 'Unknown'}</p>
+              <p>Posted by: {item.owner.displayName || item.owner.username || 'Unknown'}{' '}
+                {item.owner?._id && (
+                  <UserRatingDisplay userId={item.owner._id} style={{ marginLeft: 8, fontSize: 15 }} showLabel={false} />
+                )}
+              </p>
               <p>Posted on: {new Date(item.createdAt).toLocaleDateString()}</p>
             </div>
             
@@ -362,6 +390,11 @@ const ItemDetail = () => {
               rows={5}
               aria-label="Message to owner"
             />
+            {error && (
+              <div className="error-message" style={{ marginBottom: 12, color: '#c62828', background: '#fff3f3', borderRadius: 8, padding: '8px 12px', fontWeight: 600 }}>
+                {error}
+              </div>
+            )}
             <div className="dialog-actions modern-actions">
               <button onClick={() => {
                 setShowTradeDialog(false);
@@ -394,8 +427,13 @@ const ItemDetail = () => {
                       await sendMessage(session._id, initialTradeMessage, user._id);
                     }
                     setInitialTradeMessage('');
+                    setError(null);
                   } catch (err) {
-                    setError('Failed to create trade request');
+                    if (err.response && err.response.status === 409) {
+                      setError(err.response.data.message || 'You have already made this trade request.');
+                    } else {
+                      setError('Failed to create trade request');
+                    }
                   }
                 }}
                 className="modern-submit-btn"
@@ -420,6 +458,11 @@ const ItemDetail = () => {
           }
         }} />
       </Dialog>
+
+      {/* Whisper message notification */}
+      {whisperMessage && (
+        <div className="whisper-message-toast">{whisperMessage}</div>
+      )}
     </div>
   );
 };

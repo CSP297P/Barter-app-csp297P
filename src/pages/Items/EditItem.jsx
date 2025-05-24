@@ -4,6 +4,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { getItemById, updateItem } from '../../services/mongodb';
 import ImageUploader from '../../components/ImageUploader';
 import './EditItem.css';
+import { TextField, MenuItem } from '@mui/material';
 
 const EditItem = () => {
   const { id } = useParams();
@@ -236,6 +237,28 @@ const EditItem = () => {
             <option value="Fair">Fair</option>
             <option value="Poor">Poor</option>
           </select>
+        </div>
+        <div className="form-group">
+          <label>Estimated Value Range</label>
+          <TextField
+            select
+            name="priceRange"
+            label="Estimated Value Range"
+            value={item.priceRange}
+            onChange={handleChange}
+            required
+            fullWidth
+            InputProps={{ className: 'item-upload-input' }}
+            SelectProps={{ open: true }}
+          >
+            <MenuItem value="">Select Value Range</MenuItem>
+            <MenuItem value="0-50">$0 - $50</MenuItem>
+            <MenuItem value="51-100">$51 - $100</MenuItem>
+            <MenuItem value="101-250">$101 - $250</MenuItem>
+            <MenuItem value="251-500">$251 - $500</MenuItem>
+            <MenuItem value="501-1000">$501 - $1000</MenuItem>
+            <MenuItem value="1000+">$1000+</MenuItem>
+          </TextField>
         </div>
         <div className="form-group">
           <label>Images</label>

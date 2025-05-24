@@ -4,6 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import { getPublicUserProfile, rateUser } from '../services/mongodb';
 import './UserProfileDialog.css';
 import { AuthContext } from '../contexts/AuthContext';
+import axios from 'axios';
 
 const UserProfileDialog = ({ open, userId, onClose }) => {
   const [profile, setProfile] = useState(null);
@@ -15,6 +16,7 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
   const [ratingError, setRatingError] = useState('');
   const [hasRated, setHasRated] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
   const { user } = useContext(AuthContext);
   const isOwnProfile = user && profile && user._id === profile._id;
@@ -48,6 +50,24 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
     setRatingError('');
     setShowEditConfirm(false);
   }, [userId, open]);
+
+  useEffect(() => {
+    const fetchProfilePhotoUrl = async () => {
+      if (profile && profile.photoKey) {
+        try {
+          const res = await axios.get(`/users/${profile._id}/profile-photo-url`);
+          setProfilePhotoUrl(res.data.url);
+        } catch (err) {
+          setProfilePhotoUrl('');
+        }
+      } else if (profile && profile.photoURL) {
+        setProfilePhotoUrl(profile.photoURL);
+      } else {
+        setProfilePhotoUrl('');
+      }
+    };
+    fetchProfilePhotoUrl();
+  }, [profile]);
 
   const handleRate = async () => {
     if (myRating && !showEditConfirm) {
@@ -93,8 +113,8 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
         <div className="user-profile-dialog-content">
           <div className="profile-header">
             <div className="profile-avatar">
-              {profile.photoURL ? (
-                <img src={profile.photoURL} alt={profile.displayName} />
+              {profilePhotoUrl ? (
+                <img src={profilePhotoUrl} alt={profile.displayName} />
               ) : (
                 <span>
                   {profile.displayName
@@ -165,6 +185,40 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+// Reusable component to display a user's average rating
+export const UserRatingDisplay = ({ userId, style = {}, showLabel = true }) => {
+  const [avgRating, setAvgRating] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    setLoading(true);
+    getPublicUserProfile(userId)
+      .then(profile => {
+        let rating = 0;
+        if (profile && profile.averageRating !== undefined) {
+          rating = Number(profile.averageRating).toFixed(2);
+        } else if (profile && profile.ratings && profile.ratings.length > 0) {
+          rating = (profile.ratings.reduce((a, b) => a + b.value, 0) / profile.ratings.length).toFixed(2);
+        }
+        setAvgRating(rating);
+        setLoading(false);
+      })
+      .catch(() => {
+        setAvgRating(null);
+        setLoading(false);
+      });
+  }, [userId]);
+
+  if (loading) return <span style={style}>⭐ ...</span>;
+  if (avgRating === null) return null;
+  return (
+    <span style={style} title={`User rating: ${avgRating}`}>
+      ⭐ {showLabel ? `Rating: ${avgRating}` : avgRating}
+    </span>
   );
 };
 

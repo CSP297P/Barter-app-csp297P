@@ -10,7 +10,7 @@ const fs = require('fs');
 router.get('/user/available', auth, async (req, res) => {
   try {
     const items = await Item.find({ owner: req.user.userId, status: 'available' })
-      .populate('owner', 'displayName');
+      .populate('owner', 'displayName photoKey');
     res.json(items);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user items' });
@@ -20,8 +20,12 @@ router.get('/user/available', auth, async (req, res) => {
 // Get all items
 router.get('/', async (req, res) => {
   try {
-    const items = await Item.find().populate('owner', 'displayName');
-    res.json(items);
+    const randomItems = await Item.aggregate([
+      { $sample: { size: 100 } } // adjust size as needed for max items to return
+    ]);
+    // Populate owner for each item (need to re-query for population)
+    const populatedItems = await Item.populate(randomItems, { path: 'owner', select: 'displayName photoKey' });
+    res.json(populatedItems);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching items' });
   }
@@ -30,7 +34,7 @@ router.get('/', async (req, res) => {
 // Get item by ID
 router.get('/:id', async (req, res) => {
   try {
-    const item = await Item.findById(req.params.id).populate('owner', 'displayName');
+    const item = await Item.findById(req.params.id).populate('owner', 'displayName photoKey');
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
@@ -140,7 +144,7 @@ router.put('/:id', auth, async (req, res) => {
     console.log('Item updated successfully:', updatedItem);
 
     // Populate owner field
-    await updatedItem.populate('owner', 'displayName');
+    await updatedItem.populate('owner', 'displayName photoKey');
     
     // Send response with the updated item
     res.json(updatedItem);

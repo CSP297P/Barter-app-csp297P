@@ -382,26 +382,59 @@ html, body {
   }
 }
 
+.no-scroll {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
 .dialog-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  box-shadow: none;
   z-index: 1000;
+  /* Prevent scroll propagation to background */
+  overscroll-behavior: contain;
 }
+
 .dialog-content {
-  background: var(--color-bg-card);
+  background: var(--color-bg-card) !important;
   padding: 2rem;
-  border-radius: 12px;
+  border-radius: 16px;
   width: 90%;
   max-width: 400px;
-  box-shadow: var(--color-shadow);
+  box-shadow: 0 4px 24px rgba(25, 118, 210, 0.10);
+  min-height: 200px;
+  position: relative;
+  padding-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  max-height: 80vh;
+  overflow-y: auto;
+  pointer-events: auto;
+  touch-action: auto;
+  min-height: 0;
 }
+.dialog-content h2 {
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+  font-size: 1.5rem;
+}
+.dialog-content p {
+  margin: 0 0 1.5rem 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
 .close-button {
   position: absolute;
   top: 10px;
@@ -730,7 +763,7 @@ html, body {
 }
 
 .dialog-content {
-  background: white;
+  background: var(--color-bg-card) !important;
   padding: 1.5rem;
   border-radius: 8px;
   position: relative;
@@ -922,7 +955,7 @@ html, body {
   background: #181a1b;
 }
 .dark .dialog-content {
-  background: #23272f;
+  background: var(--color-bg-card) !important;
 }
 .dark .search-input {
   background: #23272f;
@@ -1029,4 +1062,15 @@ html, body {
 .price-filter-select:focus, .price-filter-select:hover {
   border: 1.5px solid var(--color-primary);
   box-shadow: 0 4px 16px rgba(25, 118, 210, 0.08);
+}
+
+/*
+In React, add document.body.classList.add('no-scroll') when dialog is open,
+and document.body.classList.remove('no-scroll') when dialog is closed.
+*/
+
+.item-upload-custom {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 } 
