@@ -35,15 +35,8 @@ const initializeSocketService = (io) => {
         socket.join(roomId);
         socket.emit('joined_session', { sessionId });
 
-        // Mark all messages in this session as read
-        await Message.updateMany(
-          {
-            sessionId,
-            read: false,
-            senderId: { $ne: socket.userId }
-          },
-          { read: true }
-        );
+        // Mark messages as read only when explicitly requested
+        // Remove automatic marking of messages as read
       } catch (error) {
         console.error('Error joining trade session:', error);
         socket.emit('error', { message: 'Error joining trade session' });
@@ -51,11 +44,17 @@ const initializeSocketService = (io) => {
     });
 
     // Handle new messages
-    socket.on('new_message', async ({ sessionId, content, senderId }) => {
+    socket.on('new_message', async ({ sessionId, content, senderId, isSystemMessage }) => {
       try {
         const session = await TradeSession.findById(sessionId).exec();
         if (!session) {
           socket.emit('error', { message: 'Trade session not found' });
+          return;
+        }
+
+        // Check if session is rejected
+        if (session.status === 'denied') {
+          socket.emit('error', { message: 'Cannot send messages in a rejected trade session' });
           return;
         }
 
@@ -70,18 +69,36 @@ const initializeSocketService = (io) => {
           sessionId,
           senderId,
           content: content.trim(),
-          read: false
+          read: false,
+          isSystemMessage: isSystemMessage || false
         });
 
         // Populate sender's displayName
         await message.populate('senderId', 'displayName');
 
-        // Emit message to all participants in the room, including senderName
-        const roomId = `trade_session_${sessionId}`;
-        io.to(roomId).emit('message_received', {
+        // Get the other participant for notification
+        const otherParticipant = session.participants.find(p => p.toString() !== senderId.toString());
+
+        // Create the message object to emit
+        const messageToEmit = {
           ...message.toObject(),
           senderName: message.senderId.displayName
-        });
+        };
+
+        // Emit message to all participants in the room
+        const roomId = `trade_session_${sessionId}`;
+        io.to(roomId).emit('message_received', messageToEmit);
+
+        // Only emit to the other participant's room if they're not already in the trade session room
+        // AND if it's not a system message (system messages are already emitted to the trade session room)
+        if (otherParticipant && !message.isSystemMessage) {
+          const otherParticipantSocket = Array.from(io.sockets.sockets.values())
+            .find(s => s.userId === otherParticipant.toString());
+          
+          if (!otherParticipantSocket || !otherParticipantSocket.rooms.has(roomId)) {
+            io.to(`user_${otherParticipant}`).emit('message_received', messageToEmit);
+          }
+        }
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });

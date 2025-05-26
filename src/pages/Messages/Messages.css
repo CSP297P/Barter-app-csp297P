@@ -175,25 +175,50 @@ html, body, #root, .App {
   text-overflow: ellipsis;
 }
 
-.pending-badge, .denied-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 16px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  margin-top: 4px;
-  letter-spacing: 0.01em;
-}
 .pending-badge {
-  background: #fffbe6;
-  color: #b59f00;
-  border: 1px solid #ffe066;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-top: 4px;
+  display: inline-block;
 }
+
+.approval-pending-badge {
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.confirmed-badge {
+  background-color: #dcfce7;
+  color: #166534;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-top: 4px;
+  display: inline-block;
+}
+
 .denied-badge {
-  background: #ffeaea;
-  color: #c62828;
-  border: 1px solid #ffb3b3;
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-top: 4px;
+  display: inline-block;
 }
+
 .unread-badge {
   position: absolute;
   top: 6px;
@@ -975,4 +1000,35 @@ html, body, #root, .App {
   10% { opacity: 1; }
   90% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+.system-message {
+  align-self: center;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  padding: 8px 16px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  margin: 8px 0;
+  text-align: center;
+  max-width: 80%;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+}
+
+.system-message p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.system-message .message-date {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+.dark .system-message {
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
 } 

@@ -70,16 +70,26 @@ const Messages = () => {
     }
   }, [messages]);
 
-  // Fetch all conversations
+  // Fetch all conversations and unread counts
   useEffect(() => {
-    const fetchConversations = async () => {
+    const fetchConversationsAndUnreadCounts = async () => {
       try {
-        const response = await axios.get(`${config.API_BASE_URL}/trade-sessions/user`, {
+        // Fetch conversations
+        const conversationsResponse = await axios.get(`${config.API_BASE_URL}/trade-sessions/user`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`
           }
         });
-        setConversations(response.data);
+        setConversations(conversationsResponse.data);
+
+        // Fetch unread counts for all conversations
+        const unreadCountsResponse = await axios.get(`${config.API_BASE_URL}/messages/unread-counts`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setUnreadCounts(unreadCountsResponse.data);
+
         setLoading(false);
       } catch (err) {
         setError('Failed to load conversations');
@@ -87,7 +97,7 @@ const Messages = () => {
       }
     };
 
-    fetchConversations();
+    fetchConversationsAndUnreadCounts();
   }, []);
 
   // Restore selected conversation from localStorage after conversations are loaded
@@ -112,6 +122,7 @@ const Messages = () => {
   const handleNewMessage = useCallback((message) => {
     if (selectedConversation && String(message.sessionId) === String(selectedConversation._id)) {
       setMessages(prevMessages => {
+        // Check if message already exists
         if (prevMessages.some(msg => String(msg._id) === String(message._id))) {
           return prevMessages;
         }
@@ -119,12 +130,24 @@ const Messages = () => {
         return updated;
       });
     }
-    // Update unread count if message is from other user
-    if (String(message.senderId || message.sender) !== String(user._id)) {
-      setUnreadCounts(prev => ({
-        ...prev,
-        [message.sessionId]: (prev[message.sessionId] || 0) + 1
-      }));
+
+    // Update unread count for any message from other users
+    const messageSenderId = typeof message.senderId === 'object' ? message.senderId._id : message.senderId;
+    if (String(messageSenderId) !== String(user._id)) {
+      setUnreadCounts(prev => {
+        const currentCount = prev[message.sessionId] || 0;
+        // If we're in the conversation and it's a system message, don't update
+        if (selectedConversation && 
+            String(message.sessionId) === String(selectedConversation._id) && 
+            message.isSystemMessage) {
+          return prev;
+        }
+        // Otherwise, increment the count
+        return {
+          ...prev,
+          [message.sessionId]: currentCount + 1
+        };
+      });
     }
   }, [user._id, selectedConversation]);
 
@@ -134,6 +157,77 @@ const Messages = () => {
     return () => unsubscribe();
   }, [onMessage, handleNewMessage]);
 
+  // Handle new trade session
+  useEffect(() => {
+    const unsubNewSession = onNewTradeSession((data) => {
+      console.log('[SOCKET] new_trade_session event received:', data);
+      // Add the new session to the conversations list
+      setConversations(prev => {
+        // Check if the session already exists in the list
+        if (prev.some(conv => conv._id === data.session._id)) {
+          return prev;
+        }
+        // Add the new session at the beginning of the list
+        return [data.session, ...prev];
+      });
+    });
+
+    return () => unsubNewSession();
+  }, [onNewTradeSession]);
+
+  // Listen for real-time item updates in the trade session
+  useEffect(() => {
+    const unsub = onTradeSessionItemsUpdated(async (data) => {
+      if (!selectedConversation || data.sessionId !== selectedConversation._id) return;
+      
+      // Update the conversation state
+      setSelectedConversation(prev => ({
+        ...prev,
+        ...(data.offeredItems ? { offeredItems: data.offeredItems } : {}),
+        ...(data.requestedItems ? { itemIds: data.requestedItems } : {})
+      }));
+
+      // Only create messages if this client initiated the update
+      if (!lastItemUpdateByMe.current) return;
+
+      // Get the other user
+      const otherUser = selectedConversation.participants.find(p => p._id !== user._id);
+      const listType = data.offeredItems ? 'offer' : 'request';
+      
+      // Compare old and new items to determine what changed
+      const oldItems = data.offeredItems ? selectedConversation.offeredItems : selectedConversation.itemIds;
+      const newItems = data.offeredItems ? data.offeredItems : data.requestedItems;
+      
+      // Find added and removed items
+      const addedItems = newItems.filter(newItem => !oldItems.some(oldItem => oldItem._id === newItem._id));
+      const removedItems = oldItems.filter(oldItem => !newItems.some(newItem => newItem._id === oldItem._id));
+      
+      // Create messages for each change
+      for (const item of addedItems) {
+        try {
+          const messageContent = `Added "${item.title}" to the ${listType}ed items`;
+          // Send as a regular message
+          await sendMessage(selectedConversation._id, messageContent, user._id, true); // true for isSystemMessage
+        } catch (err) {
+          console.error('Failed to save message:', err);
+        }
+      }
+      
+      for (const item of removedItems) {
+        try {
+          const messageContent = `Removed "${item.title}" from the ${listType}ed items`;
+          // Send as a regular message
+          await sendMessage(selectedConversation._id, messageContent, user._id, true); // true for isSystemMessage
+        } catch (err) {
+          console.error('Failed to save message:', err);
+        }
+      }
+
+      lastItemUpdateByMe.current = false;
+    });
+    return () => unsub();
+  }, [onTradeSessionItemsUpdated, selectedConversation, user, sendMessage]);
+
   // Join selected conversation
   useEffect(() => {
     if (!selectedConversation || !isConnected) return;
@@ -142,6 +236,7 @@ const Messages = () => {
       try {
         await joinTradeSession(selectedConversation._id);
         if (cancelled) return;
+        // Reset unread count when joining the conversation
         setUnreadCounts(prev => ({
           ...prev,
           [selectedConversation._id]: 0
@@ -155,6 +250,52 @@ const Messages = () => {
     joinRoom();
     return () => { cancelled = true; };
   }, [selectedConversation, isConnected, joinTradeSession]);
+
+  // Add function to mark messages as read
+  const markMessagesAsRead = useCallback(async () => {
+    if (!selectedConversation) return;
+    
+    try {
+      await axios.post(`${config.API_BASE_URL}/messages/mark-read/${selectedConversation._id}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Clear unread count for this conversation
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedConversation._id]: 0
+      }));
+
+      // Dispatch custom event to notify Navbar
+      window.dispatchEvent(new Event('messagesRead'));
+    } catch (err) {
+      console.error('Failed to mark messages as read:', err);
+    }
+  }, [selectedConversation]);
+
+  // Handle chat area click
+  const handleChatAreaClick = useCallback(() => {
+    if (selectedConversation) {
+      markMessagesAsRead();
+      // Reset unread count when user clicks in the chat area
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedConversation._id]: 0
+      }));
+    }
+  }, [markMessagesAsRead, selectedConversation]);
+
+  // Handle input focus
+  const handleInputFocus = useCallback(() => {
+    if (selectedConversation) {
+      markMessagesAsRead();
+      // Reset unread count when user focuses the input
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedConversation._id]: 0
+      }));
+    }
+  }, [markMessagesAsRead, selectedConversation]);
 
   // Fetch and merge messages for selected conversation when it changes
   useEffect(() => {
@@ -170,7 +311,8 @@ const Messages = () => {
           setMessages(prevMessages => {
             const all = [...response.data];
             prevMessages.forEach(msg => {
-              if (!all.some(fetched => String(fetched._id) === String(msg._id))) {
+              // Only add non-system messages from socket
+              if (!msg.isSystemMessage && !all.some(fetched => String(fetched._id) === String(msg._id))) {
                 all.push(msg);
               }
             });
@@ -192,8 +334,16 @@ const Messages = () => {
     const unsubApproved = onTradeApproved((data) => {
       console.log('[SOCKET] trade_approved event received:', data, 'Current user:', user._id, 'tradeApproval:', tradeApproval, 'hasApprovedLocally:', hasApprovedLocally, 'justApproved:', justApproved.current);
       if (selectedConversation && data.sessionId === selectedConversation._id) {
+        // Update local state immediately
+        setTradeApproval(prev => ({
+          ...prev,
+          [data.userId]: true
+        }));
+        
+        // Fetch updated session data
         fetchSession(selectedConversation._id);
-        // Only show dialog if the approving user is not the current user AND current user has not approved yet (locally or from backend)
+        
+        // Only show dialog if the approving user is not the current user AND current user has not approved yet
         if (
           String(data.userId) !== String(user._id) &&
           !tradeApproval[user._id] &&
@@ -208,6 +358,7 @@ const Messages = () => {
         if (justApproved.current) justApproved.current = false;
       }
     });
+
     const unsubCompleted = onTradeCompleted((data) => {
       if (selectedConversation && data.sessionId === selectedConversation._id) {
         fetchSession(selectedConversation._id);
@@ -215,6 +366,7 @@ const Messages = () => {
         setRemoveItemsMessage(true);
       }
     });
+
     return () => {
       unsubApproved();
       unsubCompleted();
@@ -241,6 +393,7 @@ const Messages = () => {
       }
     }
   }, [selectedConversation, user ? user._id : null]);
+
 
   // Listen for real-time item updates in the trade session
   useEffect(() => {
@@ -273,25 +426,20 @@ const Messages = () => {
     };
   }, [onTradeSessionItemsUpdated, selectedConversation]);
 
-  useEffect(() => {
-    const unsubscribe = onNewTradeSession((data) => {
-      const newSession = data.session || data;
-      setConversations(prev => {
-        // Avoid duplicates
-        if (prev.some(conv => conv._id === newSession._id)) return prev;
-        return [newSession, ...prev];
-      });
-    });
-    return () => unsubscribe();
-  }, [onNewTradeSession]);
-
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
+    // Don't allow sending messages if trade is rejected
+    if (selectedConversation.status === 'denied') {
+      setError('Cannot send messages in a rejected trade session');
+      return;
+    }
 
     setSending(true);
     try {
       await sendMessage(selectedConversation._id, newMessage, user._id);
       setNewMessage('');
+      // Mark messages as read when sending a message
+      markMessagesAsRead();
     } catch (err) {
       setError('Failed to send message');
     } finally {
@@ -409,11 +557,49 @@ const Messages = () => {
   }, [isReceiver, selectedConversation, user._id]);
 
   const handleApproveTrade = async () => {
-    setHasApprovedLocally(true);
-    hasApprovedLocallyRef.current = true;
-    await axios.post(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}/approve`, {}, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    });
+    try {
+      setHasApprovedLocally(true);
+      hasApprovedLocallyRef.current = true;
+      justApproved.current = true;  // Set this to prevent showing the dialog to the approver
+      
+      // Update local state immediately
+      setTradeApproval(prev => ({
+        ...prev,
+        [user._id]: true
+      }));
+
+      const response = await axios.post(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}/approve`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      // Fetch updated session data to ensure we have the latest state
+      const sessionResponse = await axios.get(`${config.API_BASE_URL}/trade-sessions/${selectedConversation._id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      // Update the conversation with the latest data
+      setSelectedConversation(prev => ({
+        ...prev,
+        ...sessionResponse.data
+      }));
+      
+      // Update the conversation in the list
+      setConversations(prev => prev.map(conv => 
+        conv._id === selectedConversation._id 
+          ? { ...conv, ...sessionResponse.data }
+          : conv
+      ));
+
+    } catch (error) {
+      console.error('Failed to approve trade:', error);
+      // Revert local state if the request failed
+      setHasApprovedLocally(false);
+      hasApprovedLocallyRef.current = false;
+      setTradeApproval(prev => ({
+        ...prev,
+        [user._id]: false
+      }));
+    }
   };
 
   const handleAcceptTrade = async () => {
@@ -484,10 +670,18 @@ const Messages = () => {
                     <h3>{conv.item ? conv.item.title : 'Untitled Item'}</h3>
                     <p>with {otherUser?.displayName || 'User'}</p>
                     {conv.status === 'pending' && (
-                      <span className="pending-badge">Pending</span>
+                      <span className="pending-badge">Trade Pending</span>
                     )}
                     {conv.status === 'denied' && (
                       <span className="denied-badge">Rejected</span>
+                    )}
+                    {conv.status === 'active' && conv.approvals && Object.keys(conv.approvals).length === 1 && (
+                      <span className="approval-pending-badge">
+                        {conv.approvals[user._id] ? "You've approved" : "Other user approved"}
+                      </span>
+                    )}
+                    {conv.status === 'active' && conv.approvals && Object.keys(conv.approvals).length === 2 && (
+                      <span className="confirmed-badge">Trade Confirmed</span>
                     )}
                     <div className="conversation-actions-column">
                       {conv.status === 'completed' && (
@@ -574,7 +768,10 @@ const Messages = () => {
                 </span>
               )}
             </div>
-            <div className="messages-container modern-messages-container">
+            <div 
+              className="messages-container modern-messages-container"
+              onClick={handleChatAreaClick}
+            >
               {selectedConversation.status === 'pending' ? (
                 selectedConversation.status === 'pending' && selectedConversation.participants[1]._id === user._id ? (
                   <div className="chat-request-container">
@@ -649,6 +846,21 @@ const Messages = () => {
                 ) : (
                   <>
                     {messages.map(msg => {
+                      if (msg.isSystemMessage) {
+                        return (
+                          <div key={msg._id} className="system-message">
+                            <p>{msg.content}</p>
+                            <small className="message-date">{new Date(msg.timestamp).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: 'numeric',
+                              hour12: true
+                            })}</small>
+                          </div>
+                        );
+                      }
+                      
                       const isSent = (msg.senderId === user._id) ||
                                      (typeof msg.senderId === 'object' && msg.senderId && msg.senderId._id === user._id);
                       let formattedDate = 'Just now';
@@ -717,28 +929,32 @@ const Messages = () => {
                 </div>
               )}
             </div>
-            <div className="message-input modern-message-input">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                aria-label="Type your message"
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={sending || !newMessage.trim()}
-                className="send-message-button"
-                aria-label="Send message"
-              >
-                {sending ? 'Sending...' : 'Send'}
-              </button>
-            </div>
+            {/* Only show message input if trade is not rejected */}
+            {selectedConversation.status !== 'denied' && (
+              <div className="message-input modern-message-input">
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onFocus={handleInputFocus}
+                  placeholder="Type your message..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  aria-label="Type your message"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sending || !newMessage.trim()}
+                  className="send-message-button"
+                  aria-label="Send message"
+                >
+                  {sending ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="no-conversation-selected">
@@ -751,11 +967,6 @@ const Messages = () => {
       <div className="item-details-panel modern-item-details-panel">
         {selectedConversation ? (
           <>
-            {itemUpdateNotification && (
-              <div className="item-update-toast">
-                {itemUpdateNotification}
-              </div>
-            )}
             <h2>Trade Details</h2>
             {/* Requested from You (editable if receiver) */}
             <div className="item-info">

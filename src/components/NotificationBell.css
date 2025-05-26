@@ -78,12 +78,45 @@
   font-size: 15px;
 }
 
+/* Trade-related notification styles */
 .notification-trade_request .notification-bell-message {
   color: #1976d2;
 }
-.notification-trade_approved .notification-bell-message {
+.notification-trade_accepted .notification-bell-message {
   color: #43a047;
 }
-.notification-message .notification-bell-message {
-  color: #e65100;
+.notification-trade_request_accepted .notification-bell-message {
+  color: #43a047;
+}
+
+/* Dark mode styles */
+.dark .notification-bell-dropdown {
+  background: #232946;
+  color: #e0e7ff;
+}
+
+.dark .notification-bell-header {
+  background: #1a1f35;
+  border-bottom-color: #373b69;
+}
+
+.dark .notification-bell-item {
+  border-bottom-color: #373b69;
+  background: #232946;
+}
+
+.dark .notification-bell-item:hover {
+  background: #2a2f4a;
+}
+
+.dark .notification-bell-message {
+  color: #e0e7ff;
+}
+
+.dark .notification-bell-time {
+  color: #a5b4fc;
+}
+
+.dark .notification-bell-empty {
+  color: #6366f1;
 } 
