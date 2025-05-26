@@ -273,6 +273,18 @@ const Messages = () => {
     };
   }, [onTradeSessionItemsUpdated, selectedConversation]);
 
+  useEffect(() => {
+    const unsubscribe = onNewTradeSession((data) => {
+      const newSession = data.session || data;
+      setConversations(prev => {
+        // Avoid duplicates
+        if (prev.some(conv => conv._id === newSession._id)) return prev;
+        return [newSession, ...prev];
+      });
+    });
+    return () => unsubscribe();
+  }, [onNewTradeSession]);
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 

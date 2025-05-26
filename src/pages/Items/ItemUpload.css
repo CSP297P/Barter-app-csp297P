@@ -319,4 +319,95 @@ button[type="submit"]:disabled {
 
 .item-upload-divider-small {
   margin: 18px 0 8px 0 !important;
+}
+
+/* Dark mode support for upload item page */
+.dark .item-upload {
+  background: var(--color-bg-card, #232946);
+  color: var(--color-text, #e0e7ff);
+  box-shadow: 0 2px 8px rgba(30, 32, 48, 0.18);
+}
+.dark .item-upload h2 {
+  color: var(--color-text, #e0e7ff);
+}
+.dark .form-group label {
+  color: var(--color-text, #e0e7ff);
+}
+.dark .form-group input,
+.dark .form-group textarea,
+.dark .form-group select {
+  background: var(--color-bg, #181a24);
+  color: var(--color-text, #e0e7ff);
+  border: 1px solid var(--color-border, #44476a);
+}
+.dark .form-group input:focus,
+.dark .form-group textarea:focus,
+.dark .form-group select:focus {
+  border-color: var(--color-primary, #6366f1);
+}
+.dark .image-upload-container {
+  background: #181a24;
+  border-color: #44476a;
+}
+.dark .image-upload-container:hover {
+  background: #232946;
+  border-color: #6366f1;
+}
+.dark .image-preview {
+  border: 1px solid #44476a;
+}
+.dark .remove-image-button {
+  background: rgba(30, 32, 48, 0.7);
+  color: #fff;
+}
+.dark .remove-image-button:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+.dark .upload-button {
+  background: linear-gradient(90deg, #6366f1 0%, #60a5fa 100%);
+  color: #fff;
+}
+.dark .upload-button:hover {
+  background: linear-gradient(90deg, #4f46e5 0%, #2563eb 100%);
+}
+.dark .upload-button:disabled {
+  background: #44476a;
+  color: #bbb;
+}
+.dark .upload-instructions,
+.dark .uploading-indicator {
+  color: #bfc7ff;
+  background: #232946;
+}
+.dark button[type="submit"] {
+  background: #6366f1;
+  color: #fff;
+}
+.dark button[type="submit"]:hover {
+  background: #4f46e5;
+}
+.dark button[type="submit"]:disabled {
+  background: #44476a;
+  color: #bbb;
+}
+
+/* Dark scrollbar for item upload page in dark mode */
+.dark .item-upload,
+.dark .item-upload * {
+  scrollbar-width: thin;
+  scrollbar-color: #44476a #181a24;
+}
+.dark .item-upload::-webkit-scrollbar,
+.dark .item-upload *::-webkit-scrollbar {
+  width: 8px;
+  background: #181a24;
+}
+.dark .item-upload::-webkit-scrollbar-thumb,
+.dark .item-upload *::-webkit-scrollbar-thumb {
+  background: #44476a;
+  border-radius: 8px;
+}
+.dark .item-upload::-webkit-scrollbar-thumb:hover,
+.dark .item-upload *::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
 } 
