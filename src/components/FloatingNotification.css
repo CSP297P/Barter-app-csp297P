@@ -36,12 +36,30 @@
   color: inherit;
 }
 
+/* Trade-related notification styles */
 .notification-trade_request {
   border-left: 5px solid #1976d2;
 }
-.notification-trade_approved {
+.notification-trade_accepted {
   border-left: 5px solid #43a047;
 }
-.notification-message {
-  border-left: 5px solid #e65100;
+.notification-trade_request_accepted {
+  border-left: 5px solid #43a047;
+}
+
+/* Unread messages notification style */
+.notification-unread_messages {
+  border-left: 5px solid #6366f1;
+  background: linear-gradient(to right, rgba(99, 102, 241, 0.1), transparent);
+}
+
+/* Dark mode styles */
+.dark .floating-notification {
+  background: #232946;
+  color: #e0e7ff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+.dark .notification-unread_messages {
+  background: linear-gradient(to right, rgba(99, 102, 241, 0.2), transparent);
 } 

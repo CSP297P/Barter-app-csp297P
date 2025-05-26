@@ -37,12 +37,16 @@ const Navbar = ({ onThemeToggle }) => {
     const fetchUnreadCount = async () => {
       if (user) {
         try {
-          const response = await axios.get(`${config.API_BASE_URL}/messages/unread/count`, {
+          // Fetch unread counts for all conversations
+          const unreadCountsResponse = await axios.get(`${config.API_BASE_URL}/messages/unread-counts`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('token')}`
             }
           });
-          setUnreadCount(response.data.count);
+          
+          // Calculate total unread count from all conversations
+          const totalUnread = Object.values(unreadCountsResponse.data).reduce((sum, count) => sum + count, 0);
+          setUnreadCount(totalUnread);
         } catch (error) {
           console.error('Failed to fetch unread count:', error);
         }
@@ -50,6 +54,55 @@ const Navbar = ({ onThemeToggle }) => {
     };
 
     fetchUnreadCount();
+  }, [user]);
+
+  // Add socket listener for new messages to update unread count
+  useEffect(() => {
+    if (!user) return;
+    
+    const handleNewMessage = (message) => {
+      // Only update if message is from other user and not a system message
+      const messageSenderId = typeof message.senderId === 'object' ? message.senderId._id : message.senderId;
+      if (!message.isSystemMessage && String(messageSenderId) !== String(user._id)) {
+        // Fetch updated unread counts
+        axios.get(`${config.API_BASE_URL}/messages/unread-counts`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }).then(response => {
+          const totalUnread = Object.values(response.data).reduce((sum, count) => sum + count, 0);
+          setUnreadCount(totalUnread);
+        }).catch(error => {
+          console.error('Failed to fetch unread counts:', error);
+        });
+      }
+    };
+
+    const unsub = onMessage(handleNewMessage);
+    return () => unsub && unsub();
+  }, [user, onMessage]);
+
+  // Listen for message read events from the Messages page
+  useEffect(() => {
+    if (!user) return;
+
+    const handleMessageRead = () => {
+      // Fetch updated unread counts when messages are marked as read
+      axios.get(`${config.API_BASE_URL}/messages/unread-counts`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      }).then(response => {
+        const totalUnread = Object.values(response.data).reduce((sum, count) => sum + count, 0);
+        setUnreadCount(totalUnread);
+      }).catch(error => {
+        console.error('Failed to fetch unread counts:', error);
+      });
+    };
+
+    // Listen for custom event when messages are marked as read
+    window.addEventListener('messagesRead', handleMessageRead);
+    return () => window.removeEventListener('messagesRead', handleMessageRead);
   }, [user]);
 
   useEffect(() => {
@@ -71,17 +124,31 @@ const Navbar = ({ onThemeToggle }) => {
         showFloatingNotification(notif);
       }
     };
-    const handleTradeApproved = (data) => {
+    const handleTradeApproved = async (data) => {
       if (data.userId !== user._id) {
-        const notif = {
-          type: 'trade_accepted',
-          message: `Congratulations! Your trade has been approved.`,
-          timestamp: new Date(),
-          ...data
-        };
-        setNotifications(prev => [notif, ...prev]);
-        setUnreadNotifications(prev => prev + 1);
-        showFloatingNotification(notif);
+        try {
+          // Fetch the session data to get the approver's name
+          const response = await axios.get(`${config.API_BASE_URL}/trade-sessions/${data.sessionId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          const session = response.data;
+          const approver = session.participants.find(p => p._id === data.userId);
+          
+          const notif = {
+            type: 'trade_accepted',
+            message: `${approver?.displayName || 'The other user'} has approved the trade. Please review on your end in the Messages tab.`,
+            timestamp: new Date(),
+            sessionId: data.sessionId,
+            userId: data.userId
+          };
+          setNotifications(prev => [notif, ...prev]);
+          setUnreadNotifications(prev => prev + 1);
+          showFloatingNotification(notif);
+        } catch (error) {
+          console.error('Failed to fetch session data for notification:', error);
+        }
       }
     };
     const handleTradeRequestAccepted = (data) => {
@@ -91,37 +158,25 @@ const Navbar = ({ onThemeToggle }) => {
           type: 'trade_request_accepted',
           message: `Your trade request was accepted! You can now chat.`,
           timestamp: new Date(),
+          id: Date.now() + Math.random(),
           ...data.session
         };
         setNotifications(prev => [notif, ...prev]);
         setUnreadNotifications(prev => prev + 1);
+        // Always show floating notification for trade request acceptance
         showFloatingNotification(notif);
       }
     };
-    const handleNewMessage = (message) => {
-      if (window.location.pathname !== '/messages' && message.sender !== user._id) {
-        const notif = {
-          type: 'message',
-          message: `New message from ${message.senderName || 'someone'}`,
-          timestamp: new Date(),
-          ...message
-        };
-        setNotifications(prev => [notif, ...prev]);
-        setUnreadNotifications(prev => prev + 1);
-        showFloatingNotification(notif);
-      }
-    };
-    const unsub1 = onMessage(handleNewMessage);
-    const unsub2 = socketService.onTradeApproved(handleTradeApproved);
-    const unsub3 = socketService.onNewTradeSession(handleNewTradeSession);
-    const unsub4 = socketService.onTradeRequestAccepted(handleTradeRequestAccepted);
+    // Add socket listeners for trade notifications
+    const unsub1 = socketService.onTradeApproved(handleTradeApproved);
+    const unsub2 = socketService.onNewTradeSession(handleNewTradeSession);
+    const unsub3 = socketService.onTradeRequestAccepted(handleTradeRequestAccepted);
     return () => {
       unsub1 && unsub1();
       unsub2 && unsub2();
       unsub3 && unsub3();
-      unsub4 && unsub4();
     };
-  }, [user, onMessage]);
+  }, [user]);
 
   useEffect(() => {
     // Save notifications and unread count to localStorage whenever they change
