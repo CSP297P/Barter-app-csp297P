@@ -394,6 +394,38 @@ const Messages = () => {
     }
   }, [selectedConversation, user ? user._id : null]);
 
+
+  // Listen for real-time item updates in the trade session
+  useEffect(() => {
+    const unsub = onTradeSessionItemsUpdated((data) => {
+      if (!selectedConversation || data.sessionId !== selectedConversation._id) return;
+      setSelectedConversation(prev => ({
+        ...prev,
+        ...(data.offeredItems ? { offeredItems: data.offeredItems } : {}),
+        ...(data.requestedItems ? { itemIds: data.requestedItems } : {})
+      }));
+      let msg = '';
+      if (data.offeredItems) {
+        msg = lastItemUpdateByMe.current
+          ? 'Offered items updated by you.'
+          : 'Offered items updated by the other user.';
+      }
+      if (data.requestedItems) {
+        msg = lastItemUpdateByMe.current
+          ? 'Requested items updated by you.'
+          : 'Requested items updated by the other user.';
+      }
+      setItemUpdateNotification(msg);
+      lastItemUpdateByMe.current = false;
+      if (itemUpdateTimeoutRef.current) clearTimeout(itemUpdateTimeoutRef.current);
+      itemUpdateTimeoutRef.current = setTimeout(() => setItemUpdateNotification(''), 3000);
+    });
+    return () => {
+      unsub();
+      if (itemUpdateTimeoutRef.current) clearTimeout(itemUpdateTimeoutRef.current);
+    };
+  }, [onTradeSessionItemsUpdated, selectedConversation]);
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
     // Don't allow sending messages if trade is rejected

@@ -303,11 +303,12 @@ const ItemDetail = ({ itemId: propItemId, onClose, isDialog }) => {
           </div>
           <div className="owner-info">
             <div>
-              <p>Posted by: {item.owner.displayName || item.owner.username || 'Unknown'}{' '}
-                {item.owner?._id && (
-                  <UserRatingDisplay userId={item.owner._id} style={{ marginLeft: 8, fontSize: 15 }} showLabel={false} />
-                )}
-              </p>
+              <p>Posted by: {item.owner.displayName || item.owner.username || 'Unknown'}</p>
+              {item.owner?._id && (
+                <div style={{ margin: '2px 0 6px 0' }}>
+                  <UserRatingDisplay userId={item.owner._id} style={{ fontSize: 15 }} showLabel={false} />
+                </div>
+              )}
               <p>Posted on: {new Date(item.createdAt).toLocaleDateString()}</p>
             </div>
             
