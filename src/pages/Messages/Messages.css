@@ -1004,31 +1004,58 @@ html, body, #root, .App {
 
 .system-message {
   align-self: center;
-  background: rgba(99, 102, 241, 0.1);
-  color: #6366f1;
-  padding: 8px 16px;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  margin: 8px 0;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  margin: 16px 0;
   text-align: center;
-  max-width: 80%;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+  max-width: 85%;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.15);
+  border: 2px solid rgba(251, 191, 36, 0.3);
+  font-weight: 600;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-width: 200px;
+}
+
+.system-message::before {
+  content: '🔄';
+  font-size: 1.2rem;
+  margin-bottom: 4px;
 }
 
 .system-message p {
   margin: 0;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #92400e;
 }
 
 .system-message .message-date {
   display: block;
   font-size: 0.75rem;
-  margin-top: 4px;
+  margin-top: 2px;
   opacity: 0.8;
+  color: #92400e;
 }
 
 .dark .system-message {
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+  background: linear-gradient(135deg, #373b69 0%, #232946 100%);
+  color: #fef3c7;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.12);
+  border: 2px solid rgba(251, 191, 36, 0.2);
+}
+
+.dark .system-message p {
+  color: #fef3c7;
+}
+
+.dark .system-message .message-date {
+  color: #fde68a;
 } 

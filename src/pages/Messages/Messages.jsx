@@ -136,13 +136,7 @@ const Messages = () => {
     if (String(messageSenderId) !== String(user._id)) {
       setUnreadCounts(prev => {
         const currentCount = prev[message.sessionId] || 0;
-        // If we're in the conversation and it's a system message, don't update
-        if (selectedConversation && 
-            String(message.sessionId) === String(selectedConversation._id) && 
-            message.isSystemMessage) {
-          return prev;
-        }
-        // Otherwise, increment the count
+        // Only increment the count, don't clear it automatically
         return {
           ...prev,
           [message.sessionId]: currentCount + 1
@@ -236,11 +230,11 @@ const Messages = () => {
       try {
         await joinTradeSession(selectedConversation._id);
         if (cancelled) return;
-        // Reset unread count when joining the conversation
-        setUnreadCounts(prev => ({
-          ...prev,
-          [selectedConversation._id]: 0
-        }));
+        // Remove automatic clearing of unread count when joining
+        // setUnreadCounts(prev => ({
+        //   ...prev,
+        //   [selectedConversation._id]: 0
+        // }));
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to join trade session room:', err);
@@ -273,23 +267,23 @@ const Messages = () => {
     }
   }, [selectedConversation]);
 
+  // Handle input focus
+  const handleInputFocus = useCallback(() => {
+    // Remove automatic clearing of notifications on input focus
+    // if (selectedConversation) {
+    //   markMessagesAsRead();
+    //   setUnreadCounts(prev => ({
+    //     ...prev,
+    //     [selectedConversation._id]: 0
+    //   }));
+    // }
+  }, []);
+
   // Handle chat area click
   const handleChatAreaClick = useCallback(() => {
     if (selectedConversation) {
       markMessagesAsRead();
-      // Reset unread count when user clicks in the chat area
-      setUnreadCounts(prev => ({
-        ...prev,
-        [selectedConversation._id]: 0
-      }));
-    }
-  }, [markMessagesAsRead, selectedConversation]);
-
-  // Handle input focus
-  const handleInputFocus = useCallback(() => {
-    if (selectedConversation) {
-      markMessagesAsRead();
-      // Reset unread count when user focuses the input
+      // Reset unread count when user explicitly clicks in the chat area
       setUnreadCounts(prev => ({
         ...prev,
         [selectedConversation._id]: 0
@@ -440,6 +434,11 @@ const Messages = () => {
       setNewMessage('');
       // Mark messages as read when sending a message
       markMessagesAsRead();
+      // Reset unread count when user sends a message
+      setUnreadCounts(prev => ({
+        ...prev,
+        [selectedConversation._id]: 0
+      }));
     } catch (err) {
       setError('Failed to send message');
     } finally {

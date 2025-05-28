@@ -61,9 +61,9 @@ const Navbar = ({ onThemeToggle }) => {
     if (!user) return;
     
     const handleNewMessage = (message) => {
-      // Only update if message is from other user and not a system message
+      // Update if message is from other user (including system messages)
       const messageSenderId = typeof message.senderId === 'object' ? message.senderId._id : message.senderId;
-      if (!message.isSystemMessage && String(messageSenderId) !== String(user._id)) {
+      if (String(messageSenderId) !== String(user._id)) {
         // Fetch updated unread counts
         axios.get(`${config.API_BASE_URL}/messages/unread-counts`, {
           headers: {
