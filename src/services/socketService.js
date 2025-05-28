@@ -109,7 +109,7 @@ class SocketService {
     });
   }
 
-  sendMessage(sessionId, content, senderId) {
+  sendMessage(sessionId, content, senderId, isSystemMessage = false) {
     return new Promise((resolve, reject) => {
       if (!this.socket?.connected) {
         reject(new Error('Socket not connected'));
@@ -123,7 +123,8 @@ class SocketService {
       this.socket.emit('new_message', {
         sessionId: sessionId.toString(),
         content,
-        senderId: senderId.toString()
+        senderId: senderId.toString(),
+        isSystemMessage
       });
 
       this.socket.once('message_received', (message) => {
