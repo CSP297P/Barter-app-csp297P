@@ -935,9 +935,9 @@ html, body, #root, .App {
   margin: 8px 0 4px 0;
 }
 .add-more-items-btn {
-  margin: 0 0 0 12px !important;
-  vertical-align: middle;
-  align-self: center;
+  margin: 0 0 0 0px !important;
+  vertical-align: left;
+  align-self: left;
 }
 
 .accept-reject-actions {
