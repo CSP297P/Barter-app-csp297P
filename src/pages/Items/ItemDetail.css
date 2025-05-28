@@ -498,7 +498,7 @@
   padding-bottom: 0.5rem;
   scroll-snap-type: x mandatory;
   height: auto !important;
-  min-height: 320px;
+  min-height: 220px;
   align-items: stretch;
 }
 
