@@ -12,6 +12,15 @@ const conditionOptions = [
 const categoryOptions = [
   'gaming-console', 'sports-equipment', 'electronics', 'books', 'clothing', 'furniture', 'musical-instruments', 'tools', 'art-supplies', 'other'
 ];
+const priceRangeOptions = [
+  { value: '', label: 'Select Value Range' },
+  { value: '0-50', label: '$0 - $50' },
+  { value: '51-100', label: '$51 - $100' },
+  { value: '101-250', label: '$101 - $250' },
+  { value: '251-500', label: '$251 - $500' },
+  { value: '501-1000', label: '$501 - $1000' },
+  { value: '1000+', label: '$1000+' }
+];
 
 function EditItemDialog({ open, item, onClose, onSave }) {
   const [form, setForm] = useState(item);
@@ -106,9 +115,14 @@ function EditItemDialog({ open, item, onClose, onSave }) {
               name="priceRange"
               value={form.priceRange}
               onChange={handleChange}
+              select
               fullWidth
               InputProps={{ style: { borderRadius: 8, background: '#fff' } }}
-            />
+            >
+              {priceRangeOptions.map(opt => (
+                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+              ))}
+            </TextField>
           </div>
         </div>
         <Divider style={{ margin: '28px 0 18px 0' }} />
