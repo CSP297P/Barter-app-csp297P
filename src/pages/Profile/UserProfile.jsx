@@ -205,8 +205,8 @@ const UserProfile = () => {
           <h2>{profileUser.displayName}</h2>
           {profileUser.email && <p>{profileUser.email}</p>}
           <div className="profile-stats">
-            <span className="profile-stat">⭐ Rating: {profileUser.rating || 0}</span>
-            <span className="profile-stat">✅ Successful Trades: {profileUser.totalSuccessfulTrades || 0}</span>
+            <span className="profile-stat">⭐ Rating: {profileUser.averageRating || 0}</span>
+            {/* <span className="profile-stat">✅ Successful Trades: {profileUser.totalSuccessfulTrades || 0}</span> */}
             <span className="profile-stat">📦 Listed Items: {profileUser.totalListedItems || items.length}</span>
           </div>
           {/* Edit Profile button for own profile */}

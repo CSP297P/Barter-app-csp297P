@@ -669,7 +669,7 @@ const Messages = () => {
                     <h3>{conv.item ? conv.item.title : 'Untitled Item'}</h3>
                     <p>with {otherUser?.displayName || 'User'}</p>
                     {conv.status === 'pending' && (
-                      <span className="pending-badge">Trade Pending</span>
+                      <span className="pending-badge">Pending chat approval</span>
                     )}
                     {conv.status === 'denied' && (
                       <span className="denied-badge">Rejected</span>
@@ -790,9 +790,9 @@ const Messages = () => {
                           <span className="trade-request-rating">
                             <UserRatingDisplay userId={requesterProfile?._id} style={{ marginLeft: 8, fontSize: 18, verticalAlign: 'middle' }} showLabel={false} />
                           </span>
-                          <span className="trade-request-trades" style={{ marginLeft: 12, color: '#a5b4fc', fontWeight: 500, fontSize: 14 }}>
+                          {/* <span className="trade-request-trades" style={{ marginLeft: 12, color: '#a5b4fc', fontWeight: 500, fontSize: 14 }}>
                             {requesterProfile?.totalSuccessfulTrades || 0} successful trades
-                          </span>
+                          </span> */}
                         </div>
                       </div>
                       {selectedConversation.tradeMessage && (

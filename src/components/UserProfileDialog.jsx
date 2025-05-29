@@ -96,9 +96,9 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
   if (!profile) return null;
   // Use averageRating from backend if available, otherwise calculate from ratings
   const avgRating = (profile && profile.averageRating !== undefined)
-    ? Number(profile.averageRating).toFixed(2)
+    ? Number(profile.averageRating).toFixed(1)
     : (profile && profile.ratings && profile.ratings.length > 0
-        ? (profile.ratings.reduce((a, b) => a + b.value, 0) / profile.ratings.length).toFixed(2)
+        ? (profile.ratings.reduce((a, b) => a + b.value, 0) / profile.ratings.length).toFixed(1)
         : 0);
 
   return (
@@ -127,7 +127,7 @@ const UserProfileDialog = ({ open, userId, onClose }) => {
               <h2>{profile.displayName}</h2>
               <div className="profile-stats">
                 <span className="profile-stat">⭐ Rating: {avgRating}</span>
-                <span className="profile-stat">✅ Successful Trades: {profile.totalSuccessfulTrades || 0}</span>
+                {/* <span className="profile-stat">✅ Successful Trades: {profile.totalSuccessfulTrades || 0}</span> */}
                 <span className="profile-stat">📦 Listed Items: {profile.totalListedItems || (profile.postings ? profile.postings.length : 0)}</span>
               </div>
               {user && !isOwnProfile && (
@@ -200,7 +200,7 @@ export const UserRatingDisplay = ({ userId, style = {}, showLabel = true }) => {
       .then(profile => {
         let rating = 0;
         if (profile && profile.averageRating !== undefined) {
-          rating = Number(profile.averageRating).toFixed(2);
+          rating = Number(profile.averageRating).toFixed(1);
         } else if (profile && profile.ratings && profile.ratings.length > 0) {
           rating = (profile.ratings.reduce((a, b) => a + b.value, 0) / profile.ratings.length).toFixed(2);
         }
